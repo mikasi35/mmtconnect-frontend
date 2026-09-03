@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
 
-const LOGO     = 'https://mmtcare.com.au/wp-content/uploads/2026/02/MMT-CARE-LOGO.webp';
+const LOGO     = '/logo.png';
 const SITE_URL = 'https://app.mmtcare.com.au';
 
 export const metadata: Metadata = {
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     url:         `${SITE_URL}/find`,
     title:       'Find NDIS Accommodation — SDA, SIL & STA | MMT Care',
     description: 'Available SDA, SIL and STA accommodation vacancies across Australia. Find the right home for your loved one.',
-    images:      [{ url: LOGO, width: 400, height: 150, alt: 'MMT Care Connect' }],
+    images:      [{ url: LOGO, width: 512, height: 512, alt: 'MMT Care Connect' }],
   },
   alternates: { canonical: `${SITE_URL}/find` },
 };
@@ -33,7 +33,7 @@ const orgSchema = {
   '@type': 'Organization',
   name: 'MMT Care',
   url: 'https://mmtcare.com.au',
-  logo: LOGO,
+  logo: `${SITE_URL}${LOGO}`,
   contactPoint: {
     '@type': 'ContactPoint',
     telephone: '1300-066-822',
@@ -72,10 +72,11 @@ export default function FindLayout({ children }: { children: React.ReactNode }) 
         <a href="/find" className="public-nav-logo">
           <img
             src={LOGO}
-            alt="MMT Care Connect — NDIS Accommodation Platform"
-            style={{ height: '38px', width: 'auto', display: 'block' }}
-            width={120} height={38}
+            alt=""
+            style={{ height: '34px', width: '34px', display: 'block', borderRadius: 8 }}
+            width={34} height={34}
           />
+          <span className="public-nav-wordmark">MMT Care Connect</span>
         </a>
         <div className="public-nav-pill">
           <a href="/find/search" className="nav-link">Search</a>

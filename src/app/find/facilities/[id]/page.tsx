@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: FacilityDetailsPageProps): Pr
     const res = await fetch(`${API}/public/facilities/${params.id}`, { next: { revalidate: 3600 } });
     if (!res.ok) return {};
     const { data: f } = await res.json();
-    const image = f.image_urls?.[0] ?? f.image_url ?? 'https://mmtcare.com.au/wp-content/uploads/2026/02/MMT-CARE-LOGO.webp';
+    const image = f.image_urls?.[0] ?? f.image_url ?? `${SITE_URL}/logo.png`;
     const title = `${f.name} — ${f.type} in ${f.suburb}, ${f.state} | MMT Care`;
     const description = f.description
       ? f.description.slice(0, 160)

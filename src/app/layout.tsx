@@ -3,7 +3,7 @@ import './globals.css';
 import 'leaflet/dist/leaflet.css';
 import { RouteProgress } from '@/components/RouteProgress';
 
-const LOGO = 'https://mmtcare.com.au/wp-content/uploads/2026/02/MMT-CARE-LOGO.webp';
+const LOGO = '/logo.png';
 const SITE_URL = 'https://app.mmtcare.com.au';
 
 export const metadata: Metadata = {
@@ -23,18 +23,14 @@ export const metadata: Metadata = {
   creator: 'MMT Care',
   publisher: 'MMT Care',
   robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
-  icons: {
-    icon:        [{ url: LOGO, type: 'image/webp' }],
-    shortcut:    LOGO,
-    apple:       LOGO,
-  },
+  // Favicon / touch icon come from src/app/icon.png and src/app/apple-icon.png
   openGraph: {
     type:        'website',
     siteName:    'MMT Care Connect',
     url:         SITE_URL,
     title:       'MMT Care Connect — NDIS Accommodation & Placement',
     description: 'Find SDA, SIL and STA accommodation vacancies across Australia. Connect families and coordinators with MMT Care.',
-    images:      [{ url: LOGO, width: 400, height: 150, alt: 'MMT Care Connect' }],
+    images:      [{ url: LOGO, width: 512, height: 512, alt: 'MMT Care Connect' }],
   },
   twitter: {
     card:        'summary',

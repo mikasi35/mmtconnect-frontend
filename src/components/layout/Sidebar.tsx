@@ -148,7 +148,7 @@ export function Sidebar() {
       }}>
         {!collapsed && (
           <img
-            src="https://mmtcare.com.au/wp-content/uploads/2026/02/MMT-CARE-LOGO.webp"
+            src="/logo.png"
             alt="MMT Care"
             style={{ height: 32, width: 'auto', display: 'block', minWidth: 0 }}
           />

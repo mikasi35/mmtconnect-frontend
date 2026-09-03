@@ -37,7 +37,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <img 
-            src="https://mmtcare.com.au/wp-content/uploads/2026/02/MMT-CARE-LOGO.webp" 
+            src="/logo.png" 
             alt="MMT Care Connect Logo" 
             style={{ height: '56px', width: 'auto', display: 'inline-block', marginBottom: 14 }} 
           />
