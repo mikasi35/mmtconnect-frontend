@@ -31,7 +31,6 @@ function SearchContent() {
   const sp = useSearchParams();
   const router = useRouter();
 
-  const [search,      setSearch]      = useState(sp.get('search') ?? '');
   const [type,        setType]        = useState(sp.get('type')   ?? '');
   const [state,       setState]       = useState(sp.get('state')  ?? '');
   const [careNeeds,   setCareNeeds]   = useState<Record<string,boolean>>({});
@@ -39,19 +38,10 @@ function SearchContent() {
   const [loading,     setLoading]     = useState(false);
   const [searched,    setSearched]    = useState(false);
 
-  // Google Places integration can be enabled once a valid API key is available.
-  // It would turn typed locations into latitude/longitude and support autocomplete.
-  // const GOOGLE_PLACES_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
-  // async function fetchPlaceSuggestions(query: string) {
-  //   const response = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${GOOGLE_PLACES_API_KEY}`);
-  //   return response.json();
-  // }
-
   const doSearch = useCallback(async () => {
     setLoading(true); setSearched(true);
     try {
       const params = new URLSearchParams();
-      if (search)  params.set('search', search);
       if (type)    params.set('type',   type);
       if (state)   params.set('state',  state);
       const selectedNeeds = Object.entries(careNeeds).filter(([,v]) => v).map(([k]) => k);
@@ -62,11 +52,11 @@ function SearchContent() {
       setResults(Array.isArray(json.data) ? json.data : []);
     } catch { setResults([]); }
     finally { setLoading(false); }
-  }, [search, type, state, careNeeds]);
+  }, [type, state, careNeeds]);
 
-  // Auto-search on load if params exist
+  // Auto-search on load if filters are present in the URL
   useEffect(() => {
-    if (sp.get('search') || sp.get('type') || sp.get('state')) doSearch();
+    if (sp.get('type') || sp.get('state')) doSearch();
   }, [sp, doSearch]);
 
   const toggleCare = (key: string) => setCareNeeds(p => ({ ...p, [key]: !p[key] }));
@@ -85,19 +75,9 @@ function SearchContent() {
       <div className="search-panel">
         <div className="search-panel-grid">
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 4 }}>Search</label>
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && doSearch()}
-              placeholder="Type, suburb or facility name…"
-              style={{ width: '100%', padding: '9px 12px', border: '0.5px solid #D1D5DB', borderRadius: 8, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
-            />
-          </div>
-          <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 4 }}>Type</label>
             <select value={type} onChange={e => setType(e.target.value)}
-              style={{ padding: '9px 12px', border: '0.5px solid #D1D5DB', borderRadius: 8, fontSize: 14, outline: 'none', background: '#fff', cursor: 'pointer' }}>
+              style={{ width: '100%', padding: '9px 12px', border: '0.5px solid #D1D5DB', borderRadius: 8, fontSize: 14, outline: 'none', background: '#fff', cursor: 'pointer', boxSizing: 'border-box' }}>
               <option value="">All types</option>
               <option value="SIL">SIL — Supported Living</option>
               <option value="SDA">SDA — Specialist Housing</option>
@@ -107,7 +87,7 @@ function SearchContent() {
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 4 }}>State</label>
             <select value={state} onChange={e => setState(e.target.value)}
-              style={{ padding: '9px 12px', border: '0.5px solid #D1D5DB', borderRadius: 8, fontSize: 14, outline: 'none', background: '#fff', cursor: 'pointer' }}>
+              style={{ width: '100%', padding: '9px 12px', border: '0.5px solid #D1D5DB', borderRadius: 8, fontSize: 14, outline: 'none', background: '#fff', cursor: 'pointer', boxSizing: 'border-box' }}>
               <option value="">All states</option>
               {STATES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -164,7 +144,7 @@ function SearchContent() {
               <div style={{ width: 40, height: 40, margin: '0 auto 16px', borderRadius: 20, background: '#F3F4F6' }} />
               <h3 style={{ fontSize: 18, color: '#111827', margin: '0 0 8px' }}>No vacancies found</h3>
               <p style={{ color: '#6B7280', margin: '0 0 24px', fontSize: 14 }}>
-                Try broadening your search — remove some care filters or search a different state.
+                Try broadening your search — remove some care filters, or pick a different state or type.
               </p>
               <button onClick={() => router.push('/find/submit')} style={{
                 background: '#1A56CC', color: '#fff', border: 'none',
@@ -179,7 +159,7 @@ function SearchContent() {
           {!loading && !searched && (
             <div style={{ textAlign: 'center', padding: '60px 0', color: '#9CA3AF' }}>
               <div style={{ width: 40, height: 40, margin: '0 auto 16px', borderRadius: 20, background: '#E5E7EB' }} />
-              <div style={{ fontSize: 15 }}>Enter a location or select filters above to search for available accommodation.</div>
+              <div style={{ fontSize: 15 }}>Select a type, state or care need above to see available accommodation.</div>
             </div>
           )}
 

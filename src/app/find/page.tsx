@@ -35,7 +35,6 @@ const FACILITY_TYPES = [
 
 export default function FindHomePage() {
   const router = useRouter();
-  const [search, setSearch] = useState('');
   const [type, setType] = useState('');
   const [state, setState] = useState('');
 
@@ -43,8 +42,6 @@ export default function FindHomePage() {
 
   const handleSearch = () => {
     const params = new URLSearchParams();
-    const q = search.trim();
-    if (q) params.set('search', q);
     if (type) params.set('type', type);
     if (state) params.set('state', state);
     const query = params.toString();
@@ -71,7 +68,7 @@ export default function FindHomePage() {
             Submit a referral in minutes — no account needed.
           </p>
 
-          {/* Search bar */}
+          {/* Search filters */}
           <div className="hero-controls-grid">
             <div className="hero-filter-row">
               <select value={type} onChange={e => setType(e.target.value)}
@@ -86,22 +83,10 @@ export default function FindHomePage() {
                 <option value="">Select state</option>
                 {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
-            </div>
-            <div className="hero-search-bar">
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                placeholder="Search by facility name, suburb or postcode…"
-                style={{
-                  flex: 1, padding: '16px 20px', fontSize: 15,
-                  border: 'none', outline: 'none', color: '#1F2937',
-                }}
-              />
               <button onClick={handleSearch} style={{
                 background: '#1A56CC', color: '#fff', border: 'none',
-                padding: '16px 28px', fontSize: 15, fontWeight: 700,
-                cursor: 'pointer', flexShrink: 0,
+                borderRadius: 12, padding: '14px 32px', fontSize: 15, fontWeight: 700,
+                cursor: 'pointer', whiteSpace: 'nowrap',
               }}>
                 Search
               </button>
