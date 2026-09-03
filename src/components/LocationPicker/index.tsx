@@ -92,7 +92,6 @@ export default function LocationPicker({ value, onChange }: Props) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [searching,   setSearching]   = useState(false);
   const [showDrop,    setShowDrop]    = useState(false);
-  const [manualEdit,  setManualEdit]  = useState(false);
   const debounceRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wrapRef       = useRef<HTMLDivElement>(null);
 
@@ -125,7 +124,6 @@ export default function LocationPicker({ value, onChange }: Props) {
     onChange(data);
     setQuery(s.formatted);
     setShowDrop(false);
-    setManualEdit(false);
   };
 
   const handleMapClick = useCallback(async (lat: number, lng: number) => {
@@ -133,7 +131,6 @@ export default function LocationPicker({ value, onChange }: Props) {
     if (data) {
       onChange(data);
       setQuery(data.address ? `${data.address}, ${data.suburb} ${data.state}` : '');
-      setManualEdit(false);
     } else {
       onChange({ ...value, lat, lng });
     }
@@ -151,9 +148,34 @@ export default function LocationPicker({ value, onChange }: Props) {
   };
 
   return (
-    <div ref={wrapRef} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* Search bar */}
+    <div ref={wrapRef} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Manual address — always visible, the primary input */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+          <label className="form-label">Street address *</label>
+          <input className="form-input" value={value.address} onChange={e => onChange({ ...value, address: e.target.value })} placeholder="12 Mathers Way" />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Suburb *</label>
+          <input className="form-input" value={value.suburb} onChange={e => onChange({ ...value, suburb: e.target.value })} placeholder="Brassall" />
+        </div>
+        <div className="form-group">
+          <label className="form-label">State *</label>
+          <select className="form-select" value={value.state} onChange={e => onChange({ ...value, state: e.target.value })}>
+            <option value="">Select…</option>
+            {['NSW','VIC','QLD','WA','SA','TAS','ACT','NT'].map(s => <option key={s}>{s}</option>)}
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Postcode</label>
+          <input className="form-input" value={value.postcode} onChange={e => onChange({ ...value, postcode: e.target.value })} placeholder="4305" />
+        </div>
+      </div>
+
+      {/* Optional geocoding search (needs NEXT_PUBLIC_OPENCAGE_API_KEY) */}
+      {OPENCAGE_KEY && (
       <div style={{ position: 'relative' }}>
+        <label className="form-label" style={{ marginBottom: 4, display: 'block' }}>Or search for an address</label>
         <div style={{ display: 'flex', gap: 6 }}>
           <div style={{ flex: 1, position: 'relative' }}>
             <input
@@ -214,54 +236,22 @@ export default function LocationPicker({ value, onChange }: Props) {
           </div>
         )}
       </div>
+      )}
 
-      {/* Map */}
-      <div style={{ height: 220, borderRadius: 10, overflow: 'hidden', border: '0.5px solid var(--gray-200)' }}>
-        <MapPicker lat={mapLat} lng={mapLng} onMapClick={handleMapClick} />
+      {/* Map — drop / drag the pin to set the exact location (optional) */}
+      <div>
+        <label className="form-label" style={{ marginBottom: 4, display: 'block' }}>
+          Pin on map <span style={{ fontWeight: 400, color: 'var(--gray-400)' }}>(optional — tap or drag)</span>
+        </label>
+        <div style={{ height: 220, borderRadius: 10, overflow: 'hidden', border: '0.5px solid var(--gray-200)' }}>
+          <MapPicker lat={mapLat} lng={mapLng} onMapClick={handleMapClick} />
+        </div>
+        {value.lat != null && value.lng != null && (
+          <div style={{ fontSize: 11, color: 'var(--gray-400)', marginTop: 4 }}>
+            Pin: {value.lat.toFixed(5)}, {value.lng.toFixed(5)}
+          </div>
+        )}
       </div>
-
-      {/* Parsed fields */}
-      {(value.address || value.suburb) && !manualEdit && (
-        <div style={{ background: 'var(--brand-subtle)', border: '0.5px solid var(--brand-light)', borderRadius: 8, padding: '10px 14px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--brand)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Selected location</span>
-            <button type="button" onClick={() => setManualEdit(true)} style={{ fontSize: 11, color: 'var(--brand)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
-              Edit manually
-            </button>
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--gray-800)', display: 'flex', flexWrap: 'wrap', gap: '2px 12px' }}>
-            {value.address && <span><b>Street:</b> {value.address}</span>}
-            {value.suburb  && <span><b>Suburb:</b> {value.suburb}</span>}
-            {value.state   && <span><b>State:</b> {value.state}</span>}
-            {value.postcode && <span><b>Postcode:</b> {value.postcode}</span>}
-          </div>
-        </div>
-      )}
-
-      {/* Manual edit fallback */}
-      {(manualEdit || (!value.address && !value.suburb)) && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-            <label className="form-label">Street address *</label>
-            <input className="form-input" value={value.address} onChange={e => onChange({ ...value, address: e.target.value })} placeholder="12 Example St" />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Suburb *</label>
-            <input className="form-input" value={value.suburb} onChange={e => onChange({ ...value, suburb: e.target.value })} placeholder="Manly" />
-          </div>
-          <div className="form-group">
-            <label className="form-label">State *</label>
-            <select className="form-select" value={value.state} onChange={e => onChange({ ...value, state: e.target.value })}>
-              <option value="">Select…</option>
-              {['NSW','VIC','QLD','WA','SA','TAS','ACT','NT'].map(s => <option key={s}>{s}</option>)}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Postcode</label>
-            <input className="form-input" value={value.postcode} onChange={e => onChange({ ...value, postcode: e.target.value })} placeholder="2095" />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -54,6 +54,7 @@ const BLANK_VAC = { label: '', start_date: new Date().toISOString().slice(0, 10)
 const BLANK_LOC: LocationData = { address: '', suburb: '', state: '', postcode: '', lat: null, lng: null };
 const BLANK_FAC = {
   name: '', type: 'SIL', capacity: '1', description: '',
+  bedrooms: '', bathrooms: '',
   sdaCategory: '', websiteUrl: '',
   contact: { name: '', email: '', phone: '' },
   amenities: [] as string[],
@@ -70,7 +71,11 @@ const AMENITY_LABELS: Record<string, string> = Object.fromEntries(AMENITY_OPTION
 // ── Section tab component ──────────────────────────────────────
 function Tabs({ tabs, active, onChange }: { tabs: string[]; active: number; onChange: (i: number) => void }) {
   return (
-    <div style={{ display: 'flex', borderBottom: '0.5px solid var(--gray-200)', marginBottom: 20, overflowX: 'auto', flexShrink: 0 }}>
+    <div style={{
+      display: 'flex', borderBottom: '0.5px solid var(--gray-200)',
+      marginBottom: 18, overflowX: 'auto', flexShrink: 0,
+      position: 'sticky', top: 0, zIndex: 3, background: '#fff',
+    }}>
       {tabs.map((t, i) => (
         <button key={t} onClick={() => onChange(i)} style={{
           padding: '10px 14px', fontSize: 13, fontWeight: active === i ? 700 : 400,
@@ -148,6 +153,12 @@ export default function FacilitiesPage() {
   const addFeature = () => setFac(f => ({ ...f, features: [...f.features, ''] }));
   const removeFeature = (i: number) => setFac(f => ({ ...f, features: f.features.filter((_, j) => j !== i) }));
 
+  const addImages = (files: File[]) => {
+    const imgs = files.filter(f => f.type.startsWith('image/'));
+    if (imgs.length) setImageFiles(prev => [...prev, ...imgs]);
+  };
+  const removeImage = (i: number) => setImageFiles(prev => prev.filter((_, j) => j !== i));
+
   const saveFacility = async () => {
     if (!fac.name || !fac.type || !location.address || !location.suburb || !location.state) {
       setErr('Name, type, and a full address are required'); setFormTab(0); return;
@@ -165,7 +176,11 @@ export default function FacilitiesPage() {
         contact_name: fac.contact.name, contact_email: fac.contact.email, contact_phone: fac.contact.phone,
         capacity: parseInt(fac.capacity || '1'),
         amenities: fac.amenities,
-        features: fac.features.filter(f => f.trim()),
+        features: [
+          ...(fac.bedrooms ? [`${fac.bedrooms} bedroom${fac.bedrooms === '1' ? '' : 's'}`] : []),
+          ...(fac.bathrooms ? [`${fac.bathrooms} bathroom${fac.bathrooms === '1' ? '' : 's'}`] : []),
+          ...fac.features.filter(f => f.trim()),
+        ],
         care_types: fac.careTypes,
         eligibility: fac.eligibility || undefined,
         tenant_profile: fac.tenantProfile || undefined,
@@ -467,6 +482,16 @@ export default function FacilitiesPage() {
                 <input className="form-input" type="number" min={1} value={fac.capacity} onChange={e => setFac(f => ({ ...f, capacity: e.target.value }))} />
               </div>
             </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="form-group">
+                <label className="form-label">Bedrooms</label>
+                <input className="form-input" type="number" min={0} value={fac.bedrooms} onChange={e => setFac(f => ({ ...f, bedrooms: e.target.value }))} placeholder="3" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Bathrooms</label>
+                <input className="form-input" type="number" min={0} value={fac.bathrooms} onChange={e => setFac(f => ({ ...f, bathrooms: e.target.value }))} placeholder="2" />
+              </div>
+            </div>
             {fac.type === 'SDA' && (
               <div className="form-group">
                 <label className="form-label">SDA design category</label>
@@ -575,18 +600,28 @@ export default function FacilitiesPage() {
         {/* ── Tab 5: Photos ── */}
         {formTab === 5 && (
           <div className="form-group">
-            <label className="form-label">Facility photos</label>
-            <input type="file" className="form-input" accept="image/*" multiple
-              onChange={e => setImageFiles(Array.from(e.target.files || []))}
-              style={{ padding: '8px 10px' }} />
-            {imagePreviews.length > 0 && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 8, marginTop: 8 }}>
-                {imagePreviews.map((src, i) => (
-                  <div key={i} style={{ borderRadius: 10, overflow: 'hidden', height: 90 }}>
-                    <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </div>
-                ))}
-              </div>
+            <label className="form-label">
+              Facility photos <span style={{ fontWeight: 400, color: 'var(--gray-400)' }}>— add as many as you like</span>
+            </label>
+            <div className="photo-grid">
+              {imagePreviews.map((src, i) => (
+                <div key={i} className="photo-tile">
+                  <img src={src} alt={`Photo ${i + 1}`} />
+                  <button type="button" className="photo-remove" title="Remove photo"
+                    onClick={() => removeImage(i)}>✕</button>
+                </div>
+              ))}
+              <label className="photo-add">
+                <input type="file" accept="image/*" multiple hidden
+                  onChange={e => { addImages(Array.from(e.target.files || [])); e.currentTarget.value = ''; }} />
+                <span className="photo-add-plus">＋</span>
+                <span>Add photos</span>
+              </label>
+            </div>
+            {imagePreviews.length === 0 && (
+              <p style={{ fontSize: 12, color: 'var(--gray-400)', margin: '8px 0 0' }}>
+                The first photo becomes the main image on the public listing.
+              </p>
             )}
           </div>
         )}
