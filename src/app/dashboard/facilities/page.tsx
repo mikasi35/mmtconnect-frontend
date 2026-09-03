@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { Topbar } from '@/components/layout/Topbar';
 import { FacilityTypeBadge, VacancyBadge, Modal, PageLoader, EmptyState, Spinner, SectionHeader } from '@/components/ui';
 import { useFacilities } from '@/hooks/useData';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { api, resolvePublicImage } from '@/lib/api';
 import { refreshFacilities } from '@/hooks/useData';
 import type { LocationData } from '@/components/LocationPicker';
@@ -127,6 +128,8 @@ export default function FacilitiesPage() {
 
   const rows: any[] = Array.isArray(facilities) ? facilities : (facilities as any)?.data ?? [];
   const visible = typeFilter === 'all' ? rows : rows.filter((f: any) => f.type === typeFilter);
+
+  useBodyScrollLock(showFac || showVac || !!selected);
 
   useEffect(() => {
     const urls = imageFiles.map(f => URL.createObjectURL(f));
@@ -347,7 +350,7 @@ export default function FacilitiesPage() {
               <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: 'var(--gray-400)', lineHeight: 1 }}>✕</button>
             </div>
           </div>
-          <div style={{ padding: '14px 16px', overflowY: 'auto', flex: 1 }}>
+          <div className="panel-scroll" style={{ padding: '14px 16px' }}>
             <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{selected.name}</div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
               <FacilityTypeBadge type={selected.type} />

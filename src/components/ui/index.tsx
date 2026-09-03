@@ -1,5 +1,6 @@
 'use client';
 import { ReactNode } from 'react';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 // ── Badge ─────────────────────────────────────────────────────
 
@@ -142,6 +143,7 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children, footer, width = 520 }: ModalProps) {
+  useBodyScrollLock(open);
   if (!open) return null;
   return (
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>

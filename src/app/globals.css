@@ -1031,6 +1031,8 @@ h1,h2,h3,h4,h5,h6 {
   padding: 20px 22px;
   display: flex; flex-direction: column; gap: 14px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   flex: 1;
   min-height: 0;
 }
@@ -1227,7 +1229,7 @@ h1,h2,h3,h4,h5,h6 {
   width: 320px;
   background: #fff;
   border-left: 0.5px solid var(--gray-200);
-  overflow-y: auto;
+  overflow: hidden;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -1238,7 +1240,7 @@ h1,h2,h3,h4,h5,h6 {
   width: 320px;
   background: #fff;
   border-left: 0.5px solid var(--gray-200);
-  overflow-y: auto;
+  overflow: hidden;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -1309,15 +1311,30 @@ h1,h2,h3,h4,h5,h6 {
     z-index: 90;
   }
 
-  /* Modal — full-screen on mobile */
+  /* Modal — bottom sheet on mobile. dvh so the footer never hides under the URL bar. */
   .modal-backdrop { padding: 0; align-items: flex-end; }
   .modal {
     max-width: 100% !important;
     width: 100% !important;
     border-radius: 20px 20px 0 0;
-    max-height: 92vh;
+    max-height: 90dvh;
   }
   .modal-header { border-radius: 20px 20px 0 0; }
+
+  /* Detail panels — bounded flex column so the inner area scrolls, not the page */
+  .facility-detail-panel,
+  .referral-detail-panel {
+    display: flex;
+    flex-direction: column;
+    max-height: 82dvh;
+  }
+  .panel-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
 
   /* Touch-friendly min heights */
   .btn { min-height: 44px; }

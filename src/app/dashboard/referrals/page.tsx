@@ -6,6 +6,7 @@ import { UrgencyBadge, StatusBadge, Modal, PageLoader, EmptyState, Spinner } fro
 import { useReferrals } from '@/hooks/useData';
 import { api } from '@/lib/api';
 import { refreshReferrals } from '@/hooks/useData';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 const STATUSES  = ['new', 'reviewing', 'matched', 'placed', 'rejected'];
 const URGENCIES = ['immediate', 'high', 'medium', 'low'];
@@ -77,18 +78,9 @@ function ReferralsInner() {
     } finally { setUpdating(null); }
   };
 
-  const runMatch = async (id: string) => {
-    setUpdating(id);
-    try {
-      const res = await api.matching.run(id);
-      await mutate();
-      alert(`Found ${res.data.length} matching facilities. Go to Matching tab.`);
-    } catch (e: any) {
-      alert('Matching failed: ' + e.message);
-    } finally { setUpdating(null); }
-  };
-
   const rows: any[] = Array.isArray(referrals) ? referrals : (referrals as any)?.data ?? [];
+
+  useBodyScrollLock(!!selected || showForm);
 
   return (
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
@@ -96,7 +88,6 @@ function ReferralsInner() {
         <Topbar
           title="Referrals"
           subtitle={`${total || rows.length} total`}
-          actions={<button className="btn btn-primary btn-sm" onClick={openNew}>+ New referral</button>}
         />
 
         {/* Filters */}
@@ -124,10 +115,12 @@ function ReferralsInner() {
 
         {/* Content */}
         <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
-          {isLoading && rows.length === 0 ? <PageLoader /> : rows.length === 0 ? (
-            <EmptyState title="No referrals found" message="Try adjusting your filters or create a new referral."
-              action={<button className="btn btn-primary" onClick={openNew}>+ New referral</button>}
-            />
+          {isLoading && rows.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[0, 1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 72 }} />)}
+            </div>
+          ) : rows.length === 0 ? (
+            <EmptyState title="No referrals found" message="Referrals submitted on the public site will appear here." />
           ) : (
             <>
               {/* Mobile card list */}
@@ -156,8 +149,8 @@ function ReferralsInner() {
                       </span>
                       <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
                         {r.status === 'new' && (
-                          <button className="btn btn-secondary btn-sm" disabled={updating === r.id} onClick={() => runMatch(r.id)} style={{ fontSize: 11 }}>
-                            {updating === r.id ? <Spinner size={12} /> : '⌖ Match'}
+                          <button className="btn btn-secondary btn-sm" disabled={updating === r.id} onClick={() => updateStatus(r.id, 'reviewing')} style={{ fontSize: 11 }}>
+                            {updating === r.id ? <Spinner size={12} /> : 'Review'}
                           </button>
                         )}
                         {r.status === 'matched' && (
@@ -191,8 +184,8 @@ function ReferralsInner() {
                         <td onClick={e => e.stopPropagation()}>
                           <div style={{ display: 'flex', gap: 5 }}>
                             {r.status === 'new' && (
-                              <button className="btn btn-secondary btn-sm" disabled={updating === r.id} onClick={() => runMatch(r.id)} style={{ fontSize: 11 }}>
-                                {updating === r.id ? <Spinner size={12} /> : '⌖ Match'}
+                              <button className="btn btn-secondary btn-sm" disabled={updating === r.id} onClick={() => updateStatus(r.id, 'reviewing')} style={{ fontSize: 11 }}>
+                            {updating === r.id ? <Spinner size={12} /> : 'Review'}
                               </button>
                             )}
                             {r.status === 'matched' && (
@@ -219,7 +212,7 @@ function ReferralsInner() {
             <h2 style={{ fontSize: 15, margin: 0 }}>Referral detail</h2>
             <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--gray-400)', lineHeight: 1 }}>✕</button>
           </div>
-          <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
+          <div className="panel-scroll" style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ width: 46, height: 46, borderRadius: '50%', background: 'var(--brand-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora,sans-serif', fontWeight: 700, fontSize: 16, color: 'var(--brand)', flexShrink: 0 }}>
                 {selected.client_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
@@ -234,15 +227,26 @@ function ReferralsInner() {
               ['Urgency',  <UrgencyBadge key="u" urgency={selected.urgency} />],
               ['Status',   <StatusBadge  key="s" status={selected.status} />],
               ['Source',   <span key="src" style={{ textTransform: 'capitalize', fontSize: 13 }}>{selected.source_type}</span>],
-              ['Contact',  selected.source_contact || '—'],
               ['Location', selected.location_preference || '—'],
               ['Date',     fmtDate(selected.created_at)],
             ].map(([label, val]) => (
-              <div key={label as string} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '0.5px solid var(--gray-100)' }}>
-                <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>{label}</span>
-                <span style={{ fontSize: 13 }}>{val as any}</span>
+              <div key={label as string} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '7px 0', borderBottom: '0.5px solid var(--gray-100)' }}>
+                <span style={{ fontSize: 12, color: 'var(--gray-500)', flexShrink: 0 }}>{label}</span>
+                <span style={{ fontSize: 13, textAlign: 'right' }}>{val as any}</span>
               </div>
             ))}
+
+            {/* Contact — stacked so long values don't get squashed */}
+            <div style={{ background: 'var(--gray-50)', borderRadius: 8, padding: '10px 12px' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gray-400)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Contact</div>
+              {selected.source_contact
+                ? <div style={{ fontSize: 13, color: 'var(--gray-800)', lineHeight: 1.6, wordBreak: 'break-word' }}>
+                    {String(selected.source_contact).split('·').map((part: string, i: number) => (
+                      <div key={i}>{part.trim()}</div>
+                    ))}
+                  </div>
+                : <div style={{ fontSize: 13, color: 'var(--gray-400)' }}>Not provided</div>}
+            </div>
 
             {Object.entries(selected.care_needs ?? {}).filter(([, v]) => v).length > 0 && (
               <div style={{ background: 'var(--gray-50)', borderRadius: 8, padding: '10px 12px' }}>
@@ -262,25 +266,29 @@ function ReferralsInner() {
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingTop: 4 }}>
               {selected.status === 'new' && (
-                <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', minHeight: 44 }} onClick={() => runMatch(selected.id)}>
-                  {updating === selected.id ? <Spinner size={14} /> : '⌖ Run matching'}
+                <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', minHeight: 44 }} disabled={updating === selected.id}
+                  onClick={() => updateStatus(selected.id, 'reviewing')}>
+                  {updating === selected.id ? <Spinner size={14} /> : 'Start review'}
                 </button>
               )}
               {selected.status === 'reviewing' && (
-                <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center', fontSize: 13, minHeight: 44 }} onClick={() => updateStatus(selected.id, 'matched')}>
-                  Mark matched
+                <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', fontSize: 13, minHeight: 44 }} disabled={updating === selected.id}
+                  onClick={() => updateStatus(selected.id, 'matched')}>
+                  {updating === selected.id ? <Spinner size={14} /> : 'Mark matched'}
                 </button>
               )}
               {selected.status === 'matched' && (
-                <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', minHeight: 44 }} onClick={() => updateStatus(selected.id, 'placed')}>
-                  ✓ Confirm placement
+                <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', minHeight: 44 }} disabled={updating === selected.id}
+                  onClick={() => updateStatus(selected.id, 'placed')}>
+                  {updating === selected.id ? <Spinner size={14} /> : 'Confirm placement'}
                 </button>
               )}
               {!['placed', 'rejected'].includes(selected.status) && (
-                <button className="btn btn-danger" style={{ flex: 1, justifyContent: 'center', fontSize: 13, minHeight: 44 }} onClick={() => updateStatus(selected.id, 'rejected')}>
-                  Reject
+                <button className="btn btn-danger" style={{ flex: 1, justifyContent: 'center', fontSize: 13, minHeight: 44 }} disabled={updating === selected.id}
+                  onClick={() => updateStatus(selected.id, 'rejected')}>
+                  Close referral
                 </button>
               )}
             </div>
