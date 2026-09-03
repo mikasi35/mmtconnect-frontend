@@ -2,22 +2,42 @@ import React from 'react';
 import type { Metadata } from 'next';
 import Script from 'next/script';
 import { FacilityGallery } from '@/components/FacilityGallery';
+import { FacilityMap } from '@/components/FacilityMap';
 import { API_BASE } from '@/lib/api';
 
 const API      = API_BASE;
 const SITE_URL = 'https://app.mmtcare.com.au';
 
+const CARE_LABELS: Record<string, string> = {
+  personal_care: 'Personal care',
+  nursing: 'Nursing support',
+  behavioural_support: 'Behavioural support',
+  complex_medical: 'Complex medical support',
+  overnight_support: 'Overnight support',
+  '24h_support': '24-hour support',
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  SIL: 'Supported Independent Living',
+  SDA: 'Specialist Disability Accommodation',
+  STA: 'Short-Term Accommodation',
+};
+
+interface FacilityDetailsPageProps {
+  params: { id: string };
+}
+
 // ── Dynamic metadata per facility ─────────────────────────────
 export async function generateMetadata({ params }: FacilityDetailsPageProps): Promise<Metadata> {
   try {
-    const res  = await fetch(`${API}/public/facilities/${params.id}`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${API}/public/facilities/${params.id}`, { next: { revalidate: 3600 } });
     if (!res.ok) return {};
     const { data: f } = await res.json();
     const image = f.image_urls?.[0] ?? f.image_url ?? 'https://mmtcare.com.au/wp-content/uploads/2026/02/MMT-CARE-LOGO.webp';
     const title = `${f.name} — ${f.type} in ${f.suburb}, ${f.state} | MMT Care`;
     const description = f.description
       ? f.description.slice(0, 160)
-      : `${f.available_beds} bed${f.available_beds !== 1 ? 's' : ''} available at ${f.name}, a ${f.type} facility in ${f.suburb} ${f.state}. Apply via MMT Care Connect.`;
+      : `${f.available_beds} bed${f.available_beds !== 1 ? 's' : ''} available at ${f.name}, a ${f.type} home in ${f.suburb} ${f.state}. Request a placement via MMT Care Connect.`;
     return {
       title,
       description,
@@ -26,124 +46,182 @@ export async function generateMetadata({ params }: FacilityDetailsPageProps): Pr
         url: `${SITE_URL}/find/facilities/${params.id}`,
         images: [{ url: image, width: 1200, height: 630, alt: f.name }],
       },
-      twitter:    { card: 'summary_large_image', title, description, images: [image] },
+      twitter: { card: 'summary_large_image', title, description, images: [image] },
       alternates: { canonical: `${SITE_URL}/find/facilities/${params.id}` },
     };
   } catch { return {}; }
 }
 
-const CARE_LABELS: Record<string,string> = {
-  personal_care: 'Personal care',
-  nursing: 'Nursing support',
-  behavioural_support: 'Behavioural support',
-  complex_medical: 'Complex medical',
-  overnight_support: 'Overnight support',
-  '24h_support': '24h support',
-};
-
-interface FacilityDetailsPageProps {
-  params: { id: string };
+function aggregateSupportedCare(vacancies: any[]): string[] {
+  const keys = new Set<string>();
+  for (const v of vacancies ?? []) {
+    if (v?.status !== 'available') continue;
+    for (const [k, on] of Object.entries(v.care_level_supported ?? {})) {
+      if (on) keys.add(k);
+    }
+  }
+  return [...keys].map(k => CARE_LABELS[k] ?? k);
 }
 
 export default async function FacilityDetailsPage({ params }: FacilityDetailsPageProps) {
   const res = await fetch(`${API}/public/facilities/${params.id}`, { cache: 'no-store' });
   if (!res.ok) {
     return (
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 24px' }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12 }}>Facility not found</h1>
-        <p style={{ color: '#6B7280' }}>We couldn’t load that facility. Please try again or go back to the search results.</p>
+      <div className="listing">
+        <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 12 }}>Home not found</h1>
+        <p style={{ color: '#6B7280' }}>We couldn&rsquo;t load that listing. Head back to the search results.</p>
+        <a href="/find/search" style={{ color: '#1A56CC', fontWeight: 600 }}>&larr; Back to search</a>
       </div>
     );
   }
 
-  const json = await res.json();
-  const facility = json.data;
-  const images = facility.image_urls?.length ? facility.image_urls : facility.image_url ? [facility.image_url] : [];
-  const supportedCare = Object.entries(facility.supported_care ?? {}).filter(([, value]) => value).map(([key]) => CARE_LABELS[key] ?? key);
+  const f = (await res.json()).data;
+  const images: string[] = f.image_urls?.length ? f.image_urls : f.image_url ? [f.image_url] : [];
+  const supportedCare = aggregateSupportedCare(f.vacancies);
+  const features: string[] = [
+    ...(Array.isArray(f.amenities) ? f.amenities : []),
+    ...(Array.isArray(f.features) ? f.features : []),
+  ].filter(Boolean);
 
-  const facilitySchema = {
+  const available = Number(f.available_beds) || 0;
+  const total = Number(f.total_beds) || 0;
+  const lat = f.latitude != null ? parseFloat(f.latitude) : null;
+  const lng = f.longitude != null ? parseFloat(f.longitude) : null;
+  const addressLine = [f.address, f.suburb, f.state, f.postcode].filter(Boolean).join(', ');
+  const referralHref = `/find/submit?facility=${f.id}&name=${encodeURIComponent(f.name)}`;
+
+  const schema = {
     '@context': 'https://schema.org',
     '@type': 'LodgingBusiness',
-    name: facility.name,
-    description: facility.description ?? undefined,
+    name: f.name,
+    description: f.description ?? undefined,
     address: {
       '@type': 'PostalAddress',
-      streetAddress: facility.address,
-      addressLocality: facility.suburb,
-      addressRegion: facility.state,
-      postalCode: facility.postcode ?? undefined,
+      streetAddress: f.address,
+      addressLocality: f.suburb,
+      addressRegion: f.state,
+      postalCode: f.postcode ?? undefined,
       addressCountry: 'AU',
     },
-    ...(facility.latitude && facility.longitude ? {
-      geo: { '@type': 'GeoCoordinates', latitude: facility.latitude, longitude: facility.longitude },
-    } : {}),
-    telephone: facility.contact_phone ?? undefined,
-    email: facility.contact_email ?? undefined,
-    url: facility.website_url ?? `${SITE_URL}/find/facilities/${facility.id}`,
+    ...(lat && lng ? { geo: { '@type': 'GeoCoordinates', latitude: lat, longitude: lng } } : {}),
+    telephone: f.contact_phone ?? undefined,
+    email: f.contact_email ?? undefined,
+    url: f.website_url ?? `${SITE_URL}/find/facilities/${f.id}`,
     image: images[0] ?? undefined,
-    numberOfRooms: facility.available_beds,
+    numberOfRooms: available,
   };
 
   return (
-    <div className="public-page-body">
-      <Script id={`schema-facility-${facility.id}`} type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(facilitySchema) }} />
-      <a href="/find/search" style={{ display: 'inline-block', marginBottom: 20, color: '#1A56CC', textDecoration: 'none', fontSize: 14 }}>&larr; Back to search</a>
-      <div className="facility-details-grid">
-        <div className="facility-details-main">
-          <div style={{ marginBottom: 24 }}>
-            <FacilityGallery images={images} name={facility.name} />
-          </div>
+    <div className="listing">
+      <Script id={`schema-facility-${f.id}`} type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
 
-          <div style={{ background: '#fff', borderRadius: 20, border: '0.5px solid #E5E7EB', padding: 24 }}>
-            <h1 style={{ fontSize: 32, fontWeight: 800, margin: 0, color: '#111827' }}>{facility.name}</h1>
-            <p style={{ fontSize: 14, color: '#6B7280', marginTop: 8 }}>{facility.address}, {facility.suburb} {facility.state} {facility.postcode}</p>
-            {facility.description && <p style={{ fontSize: 15, color: '#374151', lineHeight: 1.7, marginTop: 18 }}>{facility.description}</p>}
+      <a href="/find/search" className="listing-back">&larr; Back to results</a>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginTop: 24 }}>
-              <div style={{ background: '#F3F4F6', borderRadius: 16, padding: 16 }}>
-                <div style={{ fontSize: 12, color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.8 }}>Available beds</div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: '#16A34A', marginTop: 8 }}>{facility.available_beds}</div>
-              </div>
-              <div style={{ background: '#F3F4F6', borderRadius: 16, padding: 16 }}>
-                <div style={{ fontSize: 12, color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.8 }}>Total beds</div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: '#111827', marginTop: 8 }}>{facility.total_beds}</div>
-              </div>
-              <div style={{ background: '#F3F4F6', borderRadius: 16, padding: 16 }}>
-                <div style={{ fontSize: 12, color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.8 }}>Photos</div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: '#111827', marginTop: 8 }}>{images.length}</div>
-              </div>
-            </div>
+      <FacilityGallery images={images} name={f.name} />
 
-            {supportedCare.length > 0 && (
-              <div style={{ marginTop: 24 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 10 }}>Supported care</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                  {supportedCare.map(item => (
-                    <div key={item} style={{ padding: '8px 12px', borderRadius: 12, background: '#E0F2FE', color: '#0C4A6E', fontSize: 13, fontWeight: 600 }}>
-                      {item}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+      {/* ── Identity ────────────────────────────────── */}
+      <div className="listing-head">
+        <div className="listing-badges">
+          <span className="listing-badge listing-badge-type">{f.type}</span>
+          {available > 0
+            ? <span className="listing-badge listing-badge-available">● Available</span>
+            : <span className="listing-badge listing-badge-full">Currently full</span>}
         </div>
-
-        <div className="facility-details-side">
-          <div style={{ background: '#fff', borderRadius: 20, border: '0.5px solid #E5E7EB', padding: 24 }}>
-            <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 10 }}>Contact</div>
-            {facility.contact_phone && <div style={{ fontSize: 15, color: '#111827', marginBottom: 8 }}>Phone: {facility.contact_phone}</div>}
-            {facility.contact_email && <div style={{ fontSize: 15, color: '#111827' }}>Email: {facility.contact_email}</div>}
+        <h1 className="listing-title">{f.name}</h1>
+        <div className="listing-place">{f.suburb}, {f.state}</div>
+        {available > 0 && (
+          <div className="listing-vacancy-count">
+            {available} vacanc{available === 1 ? 'y' : 'ies'} available
           </div>
+        )}
+      </div>
 
-          <div style={{ background: '#E5F3FF', borderRadius: 20, padding: 24 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#1E3A8A', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>Ready to refer?</div>
-            <p style={{ fontSize: 14, color: '#1E3A8A', lineHeight: 1.7, margin: 0 }}>Submit a referral for this facility and we’ll connect you with the right support.</p>
-            <a href={`/find/submit?facility=${facility.id}&name=${encodeURIComponent(facility.name)}`} style={{ display: 'inline-flex', marginTop: 20, background: '#1A56CC', color: '#fff', borderRadius: 12, padding: '12px 18px', textDecoration: 'none', fontWeight: 700 }}>Request this facility</a>
+      {/* ── Facts ───────────────────────────────────── */}
+      <div className="listing-facts">
+        <div className="listing-fact">
+          <div className="listing-fact-value" style={{ color: available > 0 ? '#16A34A' : '#111827' }}>{available}</div>
+          <div className="listing-fact-label">Available</div>
+        </div>
+        {total > 0 && (
+          <div className="listing-fact">
+            <div className="listing-fact-value">{total}</div>
+            <div className="listing-fact-label">Total beds</div>
           </div>
+        )}
+        <div className="listing-fact">
+          <div className="listing-fact-value" style={{ fontSize: 20 }}>{f.type}</div>
+          <div className="listing-fact-label">{TYPE_LABELS[f.type] ?? 'Accommodation'}</div>
         </div>
       </div>
+
+      {/* ── About ───────────────────────────────────── */}
+      {f.description && (
+        <section className="listing-section">
+          <h2 className="listing-section-title">About this home</h2>
+          <p className="listing-prose">{f.description}</p>
+          {f.tenant_profile && <p className="listing-prose" style={{ color: '#6B7280' }}>{f.tenant_profile}</p>}
+        </section>
+      )}
+
+      {/* ── Support ─────────────────────────────────── */}
+      {supportedCare.length > 0 && (
+        <section className="listing-section">
+          <h2 className="listing-section-title">Support available</h2>
+          <ul className="listing-check-list">
+            {supportedCare.map(item => <li key={item}>{item}</li>)}
+          </ul>
+          {f.eligibility && (
+            <p className="listing-prose" style={{ color: '#6B7280', marginTop: 12 }}>
+              <strong>Eligibility:</strong> {f.eligibility}
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* ── Features ────────────────────────────────── */}
+      {features.length > 0 && (
+        <section className="listing-section">
+          <h2 className="listing-section-title">Home features</h2>
+          <div className="listing-chips">
+            {features.map(x => <span key={x} className="listing-chip">{x}</span>)}
+          </div>
+        </section>
+      )}
+
+      {/* ── Location ────────────────────────────────── */}
+      <section className="listing-section">
+        <h2 className="listing-section-title">Location</h2>
+        <div className="listing-place" style={{ marginBottom: 12 }}>{f.suburb}, {f.state}</div>
+        {lat != null && lng != null && (
+          <FacilityMap lat={lat} lng={lng} label={f.name} />
+        )}
+        {addressLine && <p className="listing-prose" style={{ color: '#6B7280', marginTop: 12, fontSize: 14 }}>{addressLine}</p>}
+      </section>
+
+      {/* ── Need help ───────────────────────────────── */}
+      <section className="listing-section">
+        <h2 className="listing-section-title">Need help?</h2>
+        <p className="listing-prose">
+          Our team can help you understand whether this home may be suitable and walk you through the next steps.
+        </p>
+        <div className="listing-help-actions">
+          {f.contact_phone && <a href={`tel:${String(f.contact_phone).replace(/\s+/g, '')}`} className="listing-btn listing-btn-outline">Call {f.contact_phone}</a>}
+          <a href="/find/submit" className="listing-btn listing-btn-outline">Contact MMT Care</a>
+        </div>
+      </section>
+
+      {/* ── Referral CTA ────────────────────────────── */}
+      <div className="listing-cta">
+        <div className="listing-cta-title">Interested in this home?</div>
+        <p className="listing-cta-copy">
+          Submit a referral and our coordinators will help with the next steps. No account needed.
+        </p>
+        <a href={referralHref} className="listing-btn listing-btn-primary">Request placement &rarr;</a>
+      </div>
+
+      {/* ── Sticky mobile CTA ───────────────────────── */}
+      <a href={referralHref} className="mobile-cta-bar">Request placement &rarr;</a>
     </div>
   );
 }
