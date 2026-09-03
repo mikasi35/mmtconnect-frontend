@@ -53,9 +53,26 @@ export default function FindHomePage() {
             Submit a referral in minutes — no account needed.
           </p>
           <div className="hero-trust">
-            <span>● Real-time availability</span>
-            <span>✓ Verified NDIS providers</span>
-            <span>⚡ Referrals in minutes</span>
+            <span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="4" fill="currentColor" />
+                <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" opacity="0.5" />
+              </svg>
+              Real-time availability
+            </span>
+            <span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                <path d="m8.5 12 2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Verified NDIS providers
+            </span>
+            <span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="currentColor" />
+              </svg>
+              Referrals in minutes
+            </span>
           </div>
         </div>
 

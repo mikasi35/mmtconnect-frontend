@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import { CareNeedIcon } from './ui';
 
 export const CARE_OPTIONS = [
@@ -36,6 +37,9 @@ interface Props {
 export function SearchFilters({
   type, state, careNeeds, onType, onState, onToggleCare, onSubmit, submitLabel = 'Search', loading,
 }: Props) {
+  const count = Object.values(careNeeds).filter(Boolean).length;
+  const [open, setOpen] = useState(count > 0);
+
   return (
     <div className="sf">
       <div className={`sf-row${onSubmit ? ' has-submit' : ''}`}>
@@ -69,24 +73,41 @@ export function SearchFilters({
       </div>
 
       <div className="sf-needs">
-        <span className="sf-label">Support needs <span className="sf-label-hint">(optional)</span></span>
-        <div className="sf-chips">
-          {CARE_OPTIONS.map(o => {
-            const active = !!careNeeds[o.key];
-            return (
-              <button
-                key={o.key}
-                type="button"
-                className={`sf-chip${active ? ' is-active' : ''}`}
-                aria-pressed={active}
-                onClick={() => onToggleCare(o.key)}
-              >
-                <CareNeedIcon name={o.key} size={16} color={active ? '#ffffff' : '#1A56CC'} />
-                {o.label}
-              </button>
-            );
-          })}
-        </div>
+        <button
+          type="button"
+          className="sf-needs-toggle"
+          aria-expanded={open}
+          onClick={() => setOpen(o => !o)}
+        >
+          <span className="sf-label">
+            Support needs
+            {count > 0 && <span className="sf-needs-count">{count}</span>}
+            <span className="sf-label-hint"> (optional)</span>
+          </span>
+          <svg className={`sf-chevron${open ? ' is-open' : ''}`} width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+
+        {open && (
+          <div className="sf-chips">
+            {CARE_OPTIONS.map(o => {
+              const active = !!careNeeds[o.key];
+              return (
+                <button
+                  key={o.key}
+                  type="button"
+                  className={`sf-chip${active ? ' is-active' : ''}`}
+                  aria-pressed={active}
+                  onClick={() => onToggleCare(o.key)}
+                >
+                  <CareNeedIcon name={o.key} size={16} color={active ? '#ffffff' : '#1A56CC'} />
+                  {o.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
