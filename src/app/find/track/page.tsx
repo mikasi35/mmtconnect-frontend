@@ -1,16 +1,16 @@
 'use client';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { API_BASE } from '@/lib/api';
 
 const API = API_BASE;
 
 const STATUS_INFO: Record<string, { label: string; desc: string; color: string; bg: string }> = {
-  new:       { label: 'Received',    desc: 'Your referral has been received and is in our queue.',                         color: '#1E40AF', bg: '#DBEAFE' },
-  reviewing: { label: 'Reviewing',   desc: 'A coordinator is actively reviewing your referral and finding options.',        color: '#854D0E', bg: '#FEF9C3' },
-  matched:   { label: 'Matched!',    desc: 'We have found a suitable placement. A coordinator will contact you shortly.',   color: '#9A3412', bg: '#FFEDD5' },
-  placed:    { label: 'Placed! ✓',   desc: 'Great news — your loved one has been successfully placed in accommodation.',    color: '#166534', bg: '#DCFCE7' },
-  rejected:  { label: 'Closed',      desc: 'We were unable to find a suitable match at this time. Please call us to discuss alternatives.', color: '#991B1B', bg: '#FEE2E2' },
+  new:       { label: 'Received',            desc: 'Your referral has been received and is in our queue.',                                        color: '#1E40AF', bg: '#DBEAFE' },
+  reviewing: { label: 'Under review',        desc: 'A coordinator is actively reviewing your referral and finding options.',                       color: '#854D0E', bg: '#FEF9C3' },
+  matched:   { label: 'Match found',         desc: 'We have found a suitable placement. A coordinator will contact you shortly.',                  color: '#9A3412', bg: '#FFEDD5' },
+  placed:    { label: 'Placement confirmed', desc: 'Great news — your loved one has been successfully placed in accommodation.',                   color: '#166534', bg: '#DCFCE7' },
+  rejected:  { label: 'Closed',              desc: 'We were unable to find a suitable match at this time. Please call us to discuss alternatives.', color: '#991B1B', bg: '#FEE2E2' },
 };
 
 const URGENCY_LABELS: Record<string, string> = {
@@ -23,15 +23,26 @@ function fmtDate(d: string) {
   });
 }
 
-export default function TrackPage() {
-  const router = useRouter();
-  const [trackingId, setTrackingId] = useState('');
-  const [loading,    setLoading]    = useState(false);
-  const [result,     setResult]     = useState<any>(null);
-  const [error,      setError]      = useState('');
+function StatusIcon({ color, rejected }: { color: string; rejected?: boolean }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      {rejected
+        ? <path d="M7 12h10" stroke={color} strokeWidth="2.4" strokeLinecap="round" />
+        : <path d="m5 12.5 4.5 4.5L19 7" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />}
+    </svg>
+  );
+}
 
-  const lookup = async () => {
-    const id = trackingId.trim().toUpperCase();
+function TrackContent() {
+  const router = useRouter();
+  const sp = useSearchParams();
+  const [trackingId, setTrackingId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState('');
+
+  const lookup = useCallback(async (idInput?: string) => {
+    const id = (idInput ?? trackingId).trim().toUpperCase();
     if (!id || id.length < 6) { setError('Please enter your 8-character tracking ID'); return; }
     setLoading(true); setError(''); setResult(null);
     try {
@@ -45,7 +56,18 @@ export default function TrackPage() {
     } catch (e: any) {
       setError(e.message ?? 'Could not find a referral with that ID. Please check and try again.');
     } finally { setLoading(false); }
-  };
+  }, [trackingId]);
+
+  // Prefill + auto-track when arriving from the email link (?code=XXXX)
+  useEffect(() => {
+    const code = sp.get('code');
+    if (code) {
+      const id = code.trim().toUpperCase();
+      setTrackingId(id);
+      lookup(id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const si = result ? (STATUS_INFO[result.status] ?? STATUS_INFO.new) : null;
 
@@ -77,7 +99,7 @@ export default function TrackPage() {
             }}
           />
           <button
-            onClick={lookup}
+            onClick={() => lookup()}
             disabled={loading}
             style={{
               background: loading ? '#9CA3AF' : '#1A56CC',
@@ -106,8 +128,8 @@ export default function TrackPage() {
             padding: '20px 24px',
             display: 'flex', alignItems: 'center', gap: 16,
           }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: si.color, fontSize: 18, fontWeight: 700 }}>
-              {si.label.split(' ')[0]}
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <StatusIcon color={si.color} rejected={result.status === 'rejected'} />
             </div>
             <div>
               <div style={{ fontSize: 20, fontWeight: 800, color: si.color, marginBottom: 4 }}>{si.label}</div>
@@ -139,7 +161,7 @@ export default function TrackPage() {
                     <div style={{ width: 2, flex: 1, background: step.done ? '#1A56CC' : '#E5E7EB', marginTop: 4 }} />
                   )}
                 </div>
-                <div style={{ paddingBottom: i < arr.length - 1 ? 0 : 0, paddingTop: 2 }}>
+                <div style={{ paddingTop: 2 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: step.done ? '#111827' : '#9CA3AF' }}>
                     {step.label}
                   </div>
@@ -182,8 +204,8 @@ export default function TrackPage() {
           {/* Placed success */}
           {result.status === 'placed' && (
             <div style={{ background: '#DCFCE7', borderRadius: 14, border: '1.5px solid #86EFAC', padding: '20px 24px', textAlign: 'center' }}>
-              <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#ECFDF5', margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#166534', fontSize: 24, fontWeight: 700 }}>
-                ✓
+              <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#ECFDF5', margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <StatusIcon color="#166534" />
               </div>
               <div style={{ fontSize: 16, fontWeight: 700, color: '#166534', marginBottom: 6 }}>
                 Placement confirmed at {result.placed_facility_name}
@@ -205,7 +227,7 @@ export default function TrackPage() {
               </button>
             )}
             <button
-              onClick={() => { setResult(null); setTrackingId(''); }}
+              onClick={() => { setResult(null); setTrackingId(''); setError(''); }}
               style={{ flex: 1, background: '#F3F4F6', color: '#374151', border: 'none', borderRadius: 9, padding: '11px', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
             >
               Track another referral
@@ -217,7 +239,7 @@ export default function TrackPage() {
       {/* Help section */}
       {!result && (
         <div style={{ background: '#F8FAFF', borderRadius: 12, padding: '20px 24px', border: '0.5px solid #E5E7EB' }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#111827', marginBottom: 10 }}>Don't have a tracking ID?</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#111827', marginBottom: 10 }}>Don&rsquo;t have a tracking ID?</div>
           <p style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.6, margin: '0 0 14px' }}>
             You receive a tracking ID when you submit a referral on this site. If you submitted by phone or through a coordinator, contact us directly for an update.
           </p>
@@ -238,5 +260,13 @@ export default function TrackPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function TrackPage() {
+  return (
+    <Suspense fallback={<div style={{ maxWidth: 600, margin: '0 auto', padding: '48px 24px', color: '#6B7280' }}>Loading…</div>}>
+      <TrackContent />
+    </Suspense>
   );
 }
