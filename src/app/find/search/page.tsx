@@ -87,11 +87,12 @@ function SearchContent() {
     }
   }, [type, state, selectedNeeds]);
 
-  // Live search — debounced on any filter change
+  // Run the search once on load only if the URL already carries filters
+  // (e.g. arriving from the home page). Otherwise wait for the Search button.
   useEffect(() => {
-    const t = setTimeout(doSearch, 250);
-    return () => clearTimeout(t);
-  }, [doSearch]);
+    if (sp.get('type') || sp.get('state') || sp.get('care_needs')) doSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleCare = (key: string) => setCareNeeds(p => ({ ...p, [key]: !p[key] }));
 
@@ -114,30 +115,39 @@ function SearchContent() {
         <SearchFilters
           type={type} state={state} careNeeds={careNeeds}
           onType={setType} onState={setState} onToggleCare={toggleCare}
+          onSubmit={doSearch} submitLabel="Search vacancies" loading={loading}
         />
       </div>
 
-      <div className="results-topline">
-        <div>
-          <h1 className="results-count">
-            {loading && !results.length
-              ? 'Searching…'
-              : `${sorted.length} vacanc${sorted.length === 1 ? 'y' : 'ies'}`}
-          </h1>
-          <div className="results-context">{contextLabel}</div>
+      {hasSearched && (
+        <div className="results-topline">
+          <div>
+            <h1 className="results-count">
+              {loading && !results.length
+                ? 'Searching…'
+                : `${sorted.length} vacanc${sorted.length === 1 ? 'y' : 'ies'}`}
+            </h1>
+            <div className="results-context">{contextLabel}</div>
+          </div>
+          <label className="sort-control">
+            <span>Sort</span>
+            <select value={sort} onChange={e => setSort(e.target.value)}>
+              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </label>
         </div>
-        <label className="sort-control">
-          <span>Sort</span>
-          <select value={sort} onChange={e => setSort(e.target.value)}>
-            {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-        </label>
-      </div>
+      )}
 
       <div className="results-list">
         {loading && !results.length && (
           <div className="results-skeletons">
             {[0, 1, 2].map(i => <div key={i} className="vacancy-card-skeleton" />)}
+          </div>
+        )}
+
+        {!loading && !hasSearched && (
+          <div className="results-empty">
+            <p>Choose a type, a state and any support needs, then hit <strong>Search vacancies</strong>.</p>
           </div>
         )}
 

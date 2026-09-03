@@ -45,32 +45,30 @@ export default function FindHomePage() {
     <div className="public-page-body hero-page-body">
       {/* Hero */}
       <div className="hero-section">
-        <div className="hero-inner">
+        <div className="hero-copyblock">
           <div className="hero-eyebrow">NDIS accommodation · Australia</div>
-          <h1 className="hero-heading">Find the right NDIS home</h1>
+          <h1 className="hero-heading">Find the right<br />NDIS home</h1>
           <p className="hero-copy">
-            Real-time SDA, SIL &amp; STA vacancies. Submit a referral in minutes — no account needed.
+            Real-time SDA, SIL &amp; STA vacancies across Australia.
+            Submit a referral in minutes — no account needed.
           </p>
-
-          <div className="hero-search-card">
-            <SearchFilters
-              type={type} state={state} careNeeds={careNeeds}
-              onType={setType} onState={setState}
-              onToggleCare={key => setCareNeeds(p => ({ ...p, [key]: !p[key] }))}
-            />
-            <button className="hero-search-go" onClick={handleSearch}>Search vacancies &rarr;</button>
-          </div>
-
           <div className="hero-trust">
             <span>● Real-time availability</span>
             <span>✓ Verified NDIS providers</span>
             <span>⚡ Referrals in minutes</span>
           </div>
+        </div>
 
-          <div className="hero-cta-row">
-            <button onClick={() => router.push('/find/search')} className="hero-cta-button hero-cta-secondary">Browse all vacancies</button>
-            <button onClick={() => router.push('/find/submit')} className="hero-cta-button hero-cta-secondary">Submit a referral</button>
-          </div>
+        <div className="hero-photo" role="img" aria-label="NDIS accommodation" />
+
+        <div className="hero-search-card">
+          <SearchFilters
+            type={type} state={state} careNeeds={careNeeds}
+            onType={setType} onState={setState}
+            onToggleCare={key => setCareNeeds(p => ({ ...p, [key]: !p[key] }))}
+            onSubmit={handleSearch}
+            submitLabel="Search homes"
+          />
         </div>
       </div>
 

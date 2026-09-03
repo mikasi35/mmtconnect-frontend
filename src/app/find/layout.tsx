@@ -73,16 +73,16 @@ export default function FindLayout({ children }: { children: React.ReactNode }) 
           <img
             src={LOGO}
             alt="MMT Care Connect — NDIS Accommodation Platform"
-            style={{ height: '40px', width: 'auto', display: 'block' }}
-            width={120} height={40}
+            style={{ height: '38px', width: 'auto', display: 'block' }}
+            width={120} height={38}
           />
         </a>
-        <div className="public-nav-links">
+        <div className="public-nav-pill">
           <a href="/find/search" className="nav-link">Search</a>
           <a href="/find/submit" className="nav-link">Submit Referral</a>
           <a href="/find/track"  className="nav-link">Track My Referral</a>
-          <a href="/login"       className="nav-button">Coordinator login →</a>
         </div>
+        <a href="/login" className="nav-button">Coordinator login &rarr;</a>
       </nav>
 
       <main>{children}</main>

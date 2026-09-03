@@ -28,21 +28,27 @@ interface Props {
   onType: (v: string) => void;
   onState: (v: string) => void;
   onToggleCare: (key: string) => void;
+  onSubmit?: () => void;
+  submitLabel?: string;
+  loading?: boolean;
 }
 
-export function SearchFilters({ type, state, careNeeds, onType, onState, onToggleCare }: Props) {
+export function SearchFilters({
+  type, state, careNeeds, onType, onState, onToggleCare, onSubmit, submitLabel = 'Search', loading,
+}: Props) {
   return (
     <div className="sf">
-      <div className="sf-row">
+      <div className={`sf-row${onSubmit ? ' has-submit' : ''}`}>
         <label className="sf-field">
-          <span className="sf-label">I&rsquo;m looking for</span>
+          <span className="sf-label">Type of home</span>
           <select className="sf-select" value={type} onChange={e => onType(e.target.value)}>
-            <option value="">Any type of home</option>
+            <option value="">Any type</option>
             <option value="SIL">SIL — Supported Independent Living</option>
             <option value="SDA">SDA — Specialist Disability Accommodation</option>
             <option value="STA">STA — Short-term / respite</option>
           </select>
         </label>
+
         <label className="sf-field">
           <span className="sf-label">Where</span>
           <select className="sf-select" value={state} onChange={e => onState(e.target.value)}>
@@ -50,6 +56,16 @@ export function SearchFilters({ type, state, careNeeds, onType, onState, onToggl
             {STATES.map(s => <option key={s} value={s}>{STATE_NAMES[s]}</option>)}
           </select>
         </label>
+
+        {onSubmit && (
+          <button type="button" className="sf-submit" onClick={onSubmit} disabled={loading}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+              <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            {loading ? 'Searching…' : submitLabel}
+          </button>
+        )}
       </div>
 
       <div className="sf-needs">
