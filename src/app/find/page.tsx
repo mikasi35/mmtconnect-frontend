@@ -47,7 +47,7 @@ export default function FindHomePage() {
       <div className="hero-section">
         <div className="hero-copyblock">
           <div className="hero-eyebrow">NDIS accommodation · Australia</div>
-          <h1 className="hero-heading">Find the right<br />NDIS home</h1>
+          <h1 className="hero-heading">Find the right NDIS home<br />for the right person</h1>
           <p className="hero-copy">
             Real-time SDA, SIL &amp; STA vacancies across Australia.
             Submit a referral in minutes — no account needed.
@@ -58,8 +58,6 @@ export default function FindHomePage() {
             <span>⚡ Referrals in minutes</span>
           </div>
         </div>
-
-        <div className="hero-photo" role="img" aria-label="NDIS accommodation" />
 
         <div className="hero-search-card">
           <SearchFilters
