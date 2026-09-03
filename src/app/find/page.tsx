@@ -1,7 +1,16 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { AccommodationTypeIcon } from '@/components/ui';
+import { AccommodationTypeIcon, CareNeedIcon } from '@/components/ui';
+
+const CARE_OPTIONS = [
+  { key: 'personal_care',       label: 'Personal care' },
+  { key: 'nursing',             label: 'Nursing support' },
+  { key: 'behavioural_support', label: 'Behavioural support' },
+  { key: 'complex_medical',     label: 'Complex medical' },
+  { key: 'overnight_support',   label: 'Overnight support' },
+  { key: '24h_support',         label: '24h support' },
+];
 
 const FACILITY_TYPES = [
   {
@@ -26,6 +35,7 @@ const FACILITY_TYPES = [
 
 export default function FindHomePage() {
   const router = useRouter();
+  const [search, setSearch] = useState('');
   const [type, setType] = useState('');
   const [state, setState] = useState('');
 
@@ -33,6 +43,8 @@ export default function FindHomePage() {
 
   const handleSearch = () => {
     const params = new URLSearchParams();
+    const q = search.trim();
+    if (q) params.set('search', q);
     if (type) params.set('type', type);
     if (state) params.set('state', state);
     const query = params.toString();
@@ -59,7 +71,7 @@ export default function FindHomePage() {
             Submit a referral in minutes — no account needed.
           </p>
 
-          {/* Search filters */}
+          {/* Search bar */}
           <div className="hero-controls-grid">
             <div className="hero-filter-row">
               <select value={type} onChange={e => setType(e.target.value)}
@@ -74,10 +86,22 @@ export default function FindHomePage() {
                 <option value="">Select state</option>
                 {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
+            </div>
+            <div className="hero-search-bar">
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                placeholder="Search by facility name, suburb or postcode…"
+                style={{
+                  flex: 1, padding: '16px 20px', fontSize: 15,
+                  border: 'none', outline: 'none', color: '#1F2937',
+                }}
+              />
               <button onClick={handleSearch} style={{
                 background: '#1A56CC', color: '#fff', border: 'none',
-                borderRadius: 12, padding: '14px 32px', fontSize: 15, fontWeight: 700,
-                cursor: 'pointer', whiteSpace: 'nowrap',
+                padding: '16px 28px', fontSize: 15, fontWeight: 700,
+                cursor: 'pointer', flexShrink: 0,
               }}>
                 Search
               </button>
@@ -115,7 +139,7 @@ export default function FindHomePage() {
           </p>
           <div className="how-it-works-grid">
             {[
-              { step: '1', title: 'Search vacancies', desc: 'Browse real-time bed availability by state and accommodation type.' },
+              { step: '1', title: 'Search vacancies', desc: 'Browse real-time bed availability filtered by care needs, location and accommodation type.' },
               { step: '2', title: 'Submit a referral', desc: 'Fill in a simple form about your loved one — no account needed. Takes less than 5 minutes.' },
               { step: '3', title: 'We contact you', desc: 'A coordinator reviews your referral and contacts you within 1 business day to discuss options.' },
             ].map(item => (
@@ -165,6 +189,41 @@ export default function FindHomePage() {
                 <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 8px', color: '#111827' }}>{ft.name}</h3>
                 <p style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.6, margin: '0 0 16px' }}>{ft.desc}</p>
                 <span style={{ fontSize: 13, fontWeight: 600, color: ft.text }}>Search {ft.type} vacancies →</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Care needs explainer */}
+      <div className="section-block section-white">
+        <div className="section-inner section-split">
+          <div>
+            <h2 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 12px', color: '#111827' }}>
+              Filter by your loved one's care needs
+            </h2>
+            <p style={{ fontSize: 15, color: '#6B7280', lineHeight: 1.7, margin: '0 0 24px' }}>
+              Every person is different. Our search lets you find accommodation that specifically
+              supports your loved one's care requirements — so you only see facilities that are actually suitable.
+            </p>
+            <button onClick={() => router.push('/find/search')} style={{
+              background: '#1A56CC', color: '#fff', border: 'none', borderRadius: 10,
+              padding: '12px 24px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+            }}>
+              Search by care needs
+            </button>
+          </div>
+          <div className="care-options-grid">
+            {CARE_OPTIONS.map(opt => (
+              <div key={opt.key} style={{
+                background: '#F8FAFF', borderRadius: 10, padding: '12px 14px',
+                display: 'flex', alignItems: 'center', gap: 10,
+                border: '0.5px solid #E5E7EB',
+              }}>
+                <div style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10, background: '#fff' }}>
+                  <CareNeedIcon name={opt.key} size={20} color="#1A56CC" />
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>{opt.label}</span>
               </div>
             ))}
           </div>
