@@ -215,9 +215,8 @@ export default function UsersPage() {
             <div className="form-group">
               <label className="form-label">Role</label>
               <select className="form-select" value={form.role} onChange={e => setForm(f => ({ ...f, role:e.target.value }))}>
-                {['coordinator','facility_manager','hospital_user','admin'].map(r => (
-                  <option key={r} value={r}>{r.replace('_',' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
-                ))}
+                <option value="coordinator">Coordinator</option>
+                <option value="admin">Admin</option>
               </select>
             </div>
             <div className="form-group">

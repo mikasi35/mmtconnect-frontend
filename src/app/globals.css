@@ -1086,6 +1086,24 @@ h1,h2,h3,h4,h5,h6 {
   animation: spin 0.7s linear infinite;
 }
 
+.btn-spinner {
+  width: 15px; height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+/* ── Skeleton loading ─────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, var(--gray-100) 25%, var(--gray-50) 50%, var(--gray-100) 75%);
+  background-size: 400% 100%;
+  animation: sk 1.4s ease infinite;
+  border-radius: 8px;
+}
+.skeleton-row { height: 14px; border-radius: 6px; }
+
 /* ── Fade in ──────────────────────────────────────────────────── */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .fade-in { animation: fadeIn 0.2s ease; }

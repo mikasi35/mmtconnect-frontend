@@ -111,8 +111,9 @@ export default function LoginPage() {
               type="submit"
               className="btn btn-primary btn-lg"
               disabled={loading}
-              style={{ justifyContent: 'center', marginTop: 4 }}
+              style={{ justifyContent: 'center', marginTop: 4, gap: 8, opacity: loading ? 0.85 : 1 }}
             >
+              {loading && <span className="btn-spinner" aria-hidden="true" />}
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
@@ -128,10 +129,6 @@ export default function LoginPage() {
               ← Go back to search
             </button>
           </div>
-
-          <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--gray-400)', marginTop: 24, marginBottom: 0 }}>
-            Demo: admin@mmtcare.com.au / Admin@2026!
-          </p>
         </div>
       </div>
     </div>

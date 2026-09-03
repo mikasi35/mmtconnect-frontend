@@ -73,19 +73,11 @@ const IconErrorLogs = () => (
 
 const NAV_SECTIONS = [
   {
-    label: 'Overview',
+    label: 'Main',
     items: [
-      { href: '/dashboard',           label: 'Dashboard',  Icon: IconDashboard },
-      { href: '/dashboard/analytics', label: 'Analytics',  Icon: IconAnalytics },
-    ],
-  },
-  {
-    label: 'Operations',
-    items: [
+      { href: '/dashboard',            label: 'Dashboard',  Icon: IconDashboard },
       { href: '/dashboard/referrals',  label: 'Referrals',  Icon: IconReferrals },
-      { href: '/dashboard/matching',   label: 'Matching',   Icon: IconMatching },
       { href: '/dashboard/facilities', label: 'Facilities', Icon: IconFacilities },
-      { href: '/dashboard/placements', label: 'Placements', Icon: IconPlacements },
     ],
   },
   {
