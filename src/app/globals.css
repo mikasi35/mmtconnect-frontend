@@ -856,7 +856,7 @@ h1,h2,h3,h4,h5,h6 {
   .public-nav {
     padding: 10px 16px;
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: space-between;
     row-gap: 10px;
   }
   .public-nav-pill {
