@@ -2,15 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { AccommodationTypeIcon, CareNeedIcon } from '@/components/ui';
-
-const CARE_OPTIONS = [
-  { key: 'personal_care',       label: 'Personal care' },
-  { key: 'nursing',             label: 'Nursing support' },
-  { key: 'behavioural_support', label: 'Behavioural support' },
-  { key: 'complex_medical',     label: 'Complex medical' },
-  { key: 'overnight_support',   label: 'Overnight support' },
-  { key: '24h_support',         label: '24h support' },
-];
+import { SearchFilters, CARE_OPTIONS } from '@/components/SearchFilters';
 
 const FACILITY_TYPES = [
   {
@@ -37,13 +29,14 @@ export default function FindHomePage() {
   const router = useRouter();
   const [type, setType] = useState('');
   const [state, setState] = useState('');
-
-  const STATES = ['NSW','VIC','QLD','WA','SA','TAS','ACT','NT'];
+  const [careNeeds, setCareNeeds] = useState<Record<string, boolean>>({});
 
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (type) params.set('type', type);
     if (state) params.set('state', state);
+    const needs = Object.entries(careNeeds).filter(([, v]) => v).map(([k]) => k);
+    if (needs.length) params.set('care_needs', needs.join(','));
     const query = params.toString();
     router.push(`/find/search${query ? `?${query}` : ''}`);
   };
@@ -53,62 +46,30 @@ export default function FindHomePage() {
       {/* Hero */}
       <div className="hero-section">
         <div className="hero-inner">
-          <div style={{
-            display: 'inline-block', background: 'rgba(255,255,255,0.15)',
-            borderRadius: 20, padding: '5px 14px', fontSize: 12, fontWeight: 600,
-            color: '#fff', marginBottom: 20, letterSpacing: 0.5,
-          }}>
-            NDIS Accommodation Australia
-          </div>
-          <h1 className="hero-heading">
-            Find the right home<br />for your loved one
-          </h1>
+          <div className="hero-eyebrow">NDIS accommodation · Australia</div>
+          <h1 className="hero-heading">Find the right NDIS home</h1>
           <p className="hero-copy">
-            Search real-time NDIS accommodation vacancies across Australia.
-            Submit a referral in minutes — no account needed.
+            Real-time SDA, SIL &amp; STA vacancies. Submit a referral in minutes — no account needed.
           </p>
 
-          {/* Search filters */}
-          <div className="hero-controls-grid">
-            <div className="hero-filter-row">
-              <select value={type} onChange={e => setType(e.target.value)}
-                style={{ width: '100%', padding: '14px 16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.35)', background: '#fff', color: '#111827', fontSize: 15, cursor: 'pointer' }}>
-                <option value="">Select type</option>
-                <option value="SIL">SIL — Supported Living</option>
-                <option value="SDA">SDA — Specialist Housing</option>
-                <option value="STA">STA — Short-term / respite</option>
-              </select>
-              <select value={state} onChange={e => setState(e.target.value)}
-                style={{ width: '100%', padding: '14px 16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.35)', background: '#fff', color: '#111827', fontSize: 15, cursor: 'pointer' }}>
-                <option value="">Select state</option>
-                {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <button onClick={handleSearch} style={{
-                background: '#1A56CC', color: '#fff', border: 'none',
-                borderRadius: 12, padding: '14px 32px', fontSize: 15, fontWeight: 700,
-                cursor: 'pointer', whiteSpace: 'nowrap',
-              }}>
-                Search
-              </button>
-            </div>
-          </div>
-          <div className="hero-cta-row">
-            <button onClick={() => router.push('/find/submit')} className="hero-cta-button hero-cta-primary">Submit referral</button>
-            <button onClick={() => router.push('/find/search')} className="hero-cta-button hero-cta-secondary">Browse vacancies</button>
+          <div className="hero-search-card">
+            <SearchFilters
+              type={type} state={state} careNeeds={careNeeds}
+              onType={setType} onState={setState}
+              onToggleCare={key => setCareNeeds(p => ({ ...p, [key]: !p[key] }))}
+            />
+            <button className="hero-search-go" onClick={handleSearch}>Search vacancies &rarr;</button>
           </div>
 
-          {/* Quick links */}
-          <div className="hero-quick-links">
-            {['SIL', 'SDA', 'STA'].map(typeOption => (
-              <button key={typeOption} onClick={() => router.push(`/find/search?type=${typeOption}`)}
-                style={{
-                  background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)',
-                  color: '#fff', borderRadius: 20, padding: '6px 14px', fontSize: 13,
-                  cursor: 'pointer', fontWeight: 500,
-                }}>
-                {typeOption}
-              </button>
-            ))}
+          <div className="hero-trust">
+            <span>● Real-time availability</span>
+            <span>✓ Verified NDIS providers</span>
+            <span>⚡ Referrals in minutes</span>
+          </div>
+
+          <div className="hero-cta-row">
+            <button onClick={() => router.push('/find/search')} className="hero-cta-button hero-cta-secondary">Browse all vacancies</button>
+            <button onClick={() => router.push('/find/submit')} className="hero-cta-button hero-cta-secondary">Submit a referral</button>
           </div>
         </div>
       </div>
