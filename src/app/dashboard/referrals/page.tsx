@@ -7,6 +7,7 @@ import { useReferrals } from '@/hooks/useData';
 import { api } from '@/lib/api';
 import { refreshReferrals } from '@/hooks/useData';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
+import { PlacementModal } from '@/components/PlacementModal';
 
 const STATUSES  = ['new', 'reviewing', 'matched', 'placed', 'rejected'];
 const URGENCIES = ['immediate', 'high', 'medium', 'low'];
@@ -47,6 +48,7 @@ function ReferralsInner() {
   const [saving,       setSaving]       = useState(false);
   const [formErr,      setFormErr]      = useState('');
   const [updating,     setUpdating]     = useState<string | null>(null);
+  const [placing,      setPlacing]      = useState<any>(null);
 
   const params: Record<string, string> = {};
   if (statusFilter !== 'all') params.status = statusFilter;
@@ -76,6 +78,22 @@ function ReferralsInner() {
       await mutate(); refreshReferrals();
       if (selected?.id === id) setSelected((prev: any) => ({ ...prev, status }));
     } finally { setUpdating(null); }
+  };
+
+  // Called by PlacementModal after a facility is chosen and the referral is placed.
+  const handlePlaced = (facility: any) => {
+    const id = placing?.id;
+    setPlacing(null);
+    mutate(); refreshReferrals();
+    if (selected?.id === id) {
+      setSelected((prev: any) => ({
+        ...prev,
+        status: 'placed',
+        assigned_facility_id: facility.id,
+        assigned_facility: facility,
+        placed_at: new Date().toISOString(),
+      }));
+    }
   };
 
   const rows: any[] = Array.isArray(referrals) ? referrals : (referrals as any)?.data ?? [];
@@ -154,8 +172,8 @@ function ReferralsInner() {
                           </button>
                         )}
                         {r.status === 'matched' && (
-                          <button className="btn btn-primary btn-sm" disabled={updating === r.id} onClick={() => updateStatus(r.id, 'placed')} style={{ fontSize: 11 }}>
-                            {updating === r.id ? <Spinner size={12} /> : '✓ Place'}
+                          <button className="btn btn-primary btn-sm" onClick={() => setPlacing(r)} style={{ fontSize: 11 }}>
+                            ✓ Place
                           </button>
                         )}
                       </div>
@@ -189,8 +207,8 @@ function ReferralsInner() {
                               </button>
                             )}
                             {r.status === 'matched' && (
-                              <button className="btn btn-primary btn-sm" disabled={updating === r.id} onClick={() => updateStatus(r.id, 'placed')} style={{ fontSize: 11 }}>
-                                {updating === r.id ? <Spinner size={12} /> : '✓ Place'}
+                              <button className="btn btn-primary btn-sm" onClick={() => setPlacing(r)} style={{ fontSize: 11 }}>
+                                ✓ Place
                               </button>
                             )}
                           </div>
@@ -265,26 +283,42 @@ function ReferralsInner() {
                 <div style={{ fontSize: 13, color: 'var(--gray-700)', lineHeight: 1.5 }}>{selected.notes}</div>
               </div>
             )}
+
+            {selected.assigned_facility && (
+              <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, padding: '10px 12px' }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#15803D', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.05em' }}>Placed at</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--gray-900)' }}>{selected.assigned_facility.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--gray-600)' }}>
+                  {[selected.assigned_facility.suburb, selected.assigned_facility.state].filter(Boolean).join(', ')}
+                  {selected.assigned_facility.type ? ` · ${selected.assigned_facility.type}` : ''}
+                </div>
+                {(selected.assigned_facility.contact_phone || selected.assigned_facility.contact_email) && (
+                  <div style={{ fontSize: 12, color: 'var(--gray-600)', marginTop: 4 }}>
+                    {[selected.assigned_facility.contact_phone, selected.assigned_facility.contact_email].filter(Boolean).join(' · ')}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Action footer — pinned so the buttons are always reachable */}
           {(() => {
-            const next =
-              selected.status === 'new'       ? { to: 'reviewing', label: 'Start review' } :
-              selected.status === 'reviewing' ? { to: 'matched',   label: 'Mark matched' } :
-              selected.status === 'matched'   ? { to: 'placed',     label: 'Confirm placement' } : null;
             const canClose = !['placed', 'rejected'].includes(selected.status);
-            if (!next && !canClose) return null;
+            const primary =
+              selected.status === 'new'       ? { label: 'Start review',      run: () => updateStatus(selected.id, 'reviewing') } :
+              selected.status === 'reviewing' ? { label: 'Mark matched',      run: () => updateStatus(selected.id, 'matched') } :
+              selected.status === 'matched'   ? { label: 'Confirm placement', run: () => setPlacing(selected) } : null;
+            if (!primary && !canClose) return null;
             return (
               <div style={{ flexShrink: 0, borderTop: '0.5px solid var(--gray-200)', background: '#fff', padding: '12px 18px', display: 'flex', gap: 8 }}>
-                {next && (
+                {primary && (
                   <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', minHeight: 44 }} disabled={updating === selected.id}
-                    onClick={() => updateStatus(selected.id, next.to)}>
-                    {updating === selected.id ? <Spinner size={14} /> : next.label}
+                    onClick={primary.run}>
+                    {updating === selected.id ? <Spinner size={14} /> : primary.label}
                   </button>
                 )}
                 {canClose && (
-                  <button className="btn btn-danger" style={{ flex: next ? '0 0 auto' : 1, justifyContent: 'center', fontSize: 13, minHeight: 44 }} disabled={updating === selected.id}
+                  <button className="btn btn-danger" style={{ flex: primary ? '0 0 auto' : 1, justifyContent: 'center', fontSize: 13, minHeight: 44 }} disabled={updating === selected.id}
                     onClick={() => updateStatus(selected.id, 'rejected')}>
                     Close
                   </button>
@@ -294,6 +328,12 @@ function ReferralsInner() {
           })()}
         </div>
       )}
+
+      <PlacementModal
+        referral={placing}
+        onClose={() => setPlacing(null)}
+        onPlaced={handlePlaced}
+      />
 
       {/* New Referral Modal */}
       <Modal open={showForm} onClose={() => setShowForm(false)} title="New Referral"

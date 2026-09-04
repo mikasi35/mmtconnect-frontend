@@ -202,17 +202,41 @@ function TrackContent() {
           </div>
 
           {/* Placed success */}
-          {result.status === 'placed' && (
-            <div style={{ background: '#DCFCE7', borderRadius: 14, border: '1.5px solid #86EFAC', padding: '20px 24px', textAlign: 'center' }}>
+          {result.status === 'placed' && result.placed_facility_name && (
+            <div style={{ background: '#DCFCE7', borderRadius: 14, border: '1.5px solid #86EFAC', padding: '20px 24px' }}>
               <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#ECFDF5', margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <StatusIcon color="#166534" />
               </div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#166534', marginBottom: 6 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#166534', marginBottom: 4, textAlign: 'center' }}>
                 Placement confirmed at {result.placed_facility_name}
               </div>
-              <div style={{ fontSize: 13, color: '#166534' }}>
+              <div style={{ fontSize: 13, color: '#166534', textAlign: 'center', marginBottom: 14 }}>
                 {result.placed_facility_location}
+                {result.placed_facility_type ? ` · ${result.placed_facility_type}` : ''}
               </div>
+
+              {(result.placed_facility_phone || result.placed_facility_email || result.placed_facility_website) && (
+                <div style={{ background: '#fff', borderRadius: 10, padding: '14px 16px', marginTop: 4 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#166534', marginBottom: 8 }}>
+                    Contact the home to arrange a visit or tour
+                  </div>
+                  {result.placed_facility_phone && (
+                    <div style={{ fontSize: 13, color: '#111827', padding: '3px 0' }}>
+                      📞 <a href={`tel:${result.placed_facility_phone}`} style={{ color: '#1A56CC', textDecoration: 'none' }}>{result.placed_facility_phone}</a>
+                    </div>
+                  )}
+                  {result.placed_facility_email && (
+                    <div style={{ fontSize: 13, color: '#111827', padding: '3px 0' }}>
+                      ✉️ <a href={`mailto:${result.placed_facility_email}`} style={{ color: '#1A56CC', textDecoration: 'none' }}>{result.placed_facility_email}</a>
+                    </div>
+                  )}
+                  {result.placed_facility_website && (
+                    <div style={{ fontSize: 13, color: '#111827', padding: '3px 0' }}>
+                      🔗 <a href={result.placed_facility_website} target="_blank" rel="noopener noreferrer" style={{ color: '#1A56CC', textDecoration: 'none' }}>Visit website</a>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
