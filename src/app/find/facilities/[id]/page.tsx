@@ -53,9 +53,14 @@ export async function generateMetadata({ params }: FacilityDetailsPageProps): Pr
 }
 
 function aggregateSupportedCare(vacancies: any[]): string[] {
+  const list = vacancies ?? [];
+  // Prefer the care levels of open beds; if the home is full, fall back to what
+  // all its beds support so the listing still shows what it provides.
+  const source = list.some(v => v?.status === 'available')
+    ? list.filter(v => v?.status === 'available')
+    : list;
   const keys = new Set<string>();
-  for (const v of vacancies ?? []) {
-    if (v?.status !== 'available') continue;
+  for (const v of source) {
     for (const [k, on] of Object.entries(v.care_level_supported ?? {})) {
       if (on) keys.add(k);
     }
@@ -130,9 +135,13 @@ export default async function FacilityDetailsPage({ params }: FacilityDetailsPag
         </div>
         <h1 className="listing-title">{f.name}</h1>
         <div className="listing-place">{f.suburb}, {f.state}</div>
-        {available > 0 && (
+        {available > 0 ? (
           <div className="listing-vacancy-count">
             {available} vacanc{available === 1 ? 'y' : 'ies'} available
+          </div>
+        ) : (
+          <div className="listing-vacancy-count" style={{ color: '#92400E' }}>
+            No vacancies right now{total > 0 ? ` · ${total} bed${total === 1 ? '' : 's'}` : ''} — ask about the waitlist
           </div>
         )}
       </div>

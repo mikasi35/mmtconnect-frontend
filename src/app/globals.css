@@ -553,7 +553,7 @@ h1,h2,h3,h4,h5,h6 {
 }
 .listing-badge-type       { background: var(--brand-light); color: var(--brand); }
 .listing-badge-available  { background: #DCFCE7; color: #166534; }
-.listing-badge-full       { background: #FEE2E2; color: #991B1B; }
+.listing-badge-full       { background: #FEF3C7; color: #92400E; }
 
 .listing-title {
   font-size: clamp(1.7rem, 4vw, 2.2rem);
@@ -761,6 +761,46 @@ h1,h2,h3,h4,h5,h6 {
   cursor: pointer;
 }
 
+/* ── Availability filter pills ──────────────────────────────── */
+.results-availability {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.avail-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--gray-300);
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-600);
+  cursor: pointer;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.avail-pill:hover { border-color: var(--gray-400); }
+.avail-pill.is-active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+.avail-pill-count {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+.avail-pill.is-active .avail-pill-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
 /* ── Vacancy card ───────────────────────────────────────────── */
 .results-grid { display: flex; flex-direction: column; gap: 14px; }
 
@@ -792,7 +832,7 @@ h1,h2,h3,h4,h5,h6 {
   border-radius: 999px;
 }
 .vacancy-card-badge.is-available { background: #DCFCE7; color: #166534; }
-.vacancy-card-badge.is-full { background: #FEE2E2; color: #991B1B; }
+.vacancy-card-badge.is-full { background: #FEF3C7; color: #92400E; }
 
 .vacancy-card-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 3px; }
 .vacancy-card-type {

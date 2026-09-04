@@ -12,6 +12,13 @@ const SORT_OPTIONS = [
   { value: 'name', label: 'Name (A–Z)' },
 ];
 
+const AVAILABILITY_OPTIONS = [
+  { value: 'all', label: 'All homes' },
+  { value: 'available', label: 'Available now' },
+  { value: 'occupied', label: 'Fully occupied' },
+] as const;
+type Availability = typeof AVAILABILITY_OPTIONS[number]['value'];
+
 function VacancyCard({ f }: { f: any }) {
   const img = f.image_urls?.[0] || f.image_url;
   const available = Number(f.available_beds) || 0;
@@ -27,7 +34,7 @@ function VacancyCard({ f }: { f: any }) {
           ? <img src={resolvePublicImage(img)} alt={f.name} loading="lazy" />
           : <div className="vacancy-card-media-empty" />}
         <span className={`vacancy-card-badge ${available > 0 ? 'is-available' : 'is-full'}`}>
-          {available > 0 ? '● Available' : 'Full'}
+          {available > 0 ? '● Available' : 'Waitlist'}
         </span>
       </div>
       <div className="vacancy-card-body">
@@ -35,7 +42,9 @@ function VacancyCard({ f }: { f: any }) {
         <h3 className="vacancy-card-name">{f.name}</h3>
         <div className="vacancy-card-place">{f.suburb}, {f.state}</div>
         <div className="vacancy-card-meta">
-          {available} bed{available === 1 ? '' : 's'} available{total > 0 ? ` · ${total} total` : ''}
+          {available > 0
+            ? `${available} bed${available === 1 ? '' : 's'} available${total > 0 ? ` · ${total} total` : ''}`
+            : `Currently full${total > 0 ? ` · ${total} bed${total === 1 ? '' : 's'}` : ''} · join the waitlist`}
         </div>
         {supports.length > 0 && (
           <div className="vacancy-card-supports">
@@ -60,6 +69,9 @@ function SearchContent() {
     return init;
   });
   const [sort, setSort] = useState('recommended');
+  const [availability, setAvailability] = useState<Availability>(
+    (sp.get('availability') as Availability) || 'all',
+  );
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -77,6 +89,8 @@ function SearchContent() {
       if (type) params.set('type', type);
       if (state) params.set('state', state);
       if (selectedNeeds.length) params.set('care_needs', selectedNeeds.join(','));
+      // Always pull every home; the Available / Occupied view is filtered client-side.
+      params.set('availability', 'all');
       const res = await fetch(`${API}/public/facilities?${params}`);
       const json = await res.json();
       setResults(Array.isArray(json.data) ? json.data : []);
@@ -96,12 +110,27 @@ function SearchContent() {
 
   const toggleCare = (key: string) => setCareNeeds(p => ({ ...p, [key]: !p[key] }));
 
+  const counts = useMemo(() => {
+    const withBeds = results.filter(f => (Number(f.available_beds) || 0) > 0).length;
+    return { all: results.length, available: withBeds, occupied: results.length - withBeds };
+  }, [results]);
+
   const sorted = useMemo(() => {
-    const list = [...results];
+    let list = results.filter(f => {
+      const avail = (Number(f.available_beds) || 0) > 0;
+      if (availability === 'available') return avail;
+      if (availability === 'occupied') return !avail;
+      return true;
+    });
+    list = [...list];
     if (sort === 'beds') list.sort((a, b) => (Number(b.available_beds) || 0) - (Number(a.available_beds) || 0));
     if (sort === 'name') list.sort((a, b) => String(a.name).localeCompare(String(b.name)));
     return list;
-  }, [results, sort]);
+  }, [results, sort, availability]);
+
+  const resultLabel = availability === 'available'
+    ? `${sorted.length} vacanc${sorted.length === 1 ? 'y' : 'ies'}`
+    : `${sorted.length} home${sorted.length === 1 ? '' : 's'}`;
 
   const contextLabel = [
     state || null,
@@ -120,22 +149,39 @@ function SearchContent() {
       </div>
 
       {hasSearched && (
-        <div className="results-topline">
-          <div>
-            <h1 className="results-count">
-              {loading && !results.length
-                ? 'Searching…'
-                : `${sorted.length} vacanc${sorted.length === 1 ? 'y' : 'ies'}`}
-            </h1>
-            <div className="results-context">{contextLabel}</div>
+        <>
+          <div className="results-topline">
+            <div>
+              <h1 className="results-count">
+                {loading && !results.length ? 'Searching…' : resultLabel}
+              </h1>
+              <div className="results-context">{contextLabel}</div>
+            </div>
+            <label className="sort-control">
+              <span>Sort</span>
+              <select value={sort} onChange={e => setSort(e.target.value)}>
+                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </label>
           </div>
-          <label className="sort-control">
-            <span>Sort</span>
-            <select value={sort} onChange={e => setSort(e.target.value)}>
-              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </label>
-        </div>
+
+          {!loading && results.length > 0 && (
+            <div className="results-availability" role="group" aria-label="Filter by availability">
+              {AVAILABILITY_OPTIONS.map(o => (
+                <button
+                  key={o.value}
+                  type="button"
+                  className={`avail-pill${availability === o.value ? ' is-active' : ''}`}
+                  aria-pressed={availability === o.value}
+                  onClick={() => setAvailability(o.value)}
+                >
+                  {o.label}
+                  <span className="avail-pill-count">{counts[o.value]}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       <div className="results-list">
@@ -151,9 +197,20 @@ function SearchContent() {
           </div>
         )}
 
-        {!loading && hasSearched && sorted.length === 0 && (
+        {!loading && hasSearched && sorted.length === 0 && results.length > 0 && availability === 'available' && (
           <div className="results-empty">
-            <h3>No vacancies match those filters</h3>
+            <h3>No homes with an open bed right now</h3>
+            <p>Every matching home is currently full. Switch to <strong>All homes</strong> to see them and join a waitlist, or submit a referral.</p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button type="button" className="listing-btn" onClick={() => setAvailability('all')}>Show all homes</button>
+              <a href="/find/submit" className="listing-btn listing-btn-primary">Submit a referral</a>
+            </div>
+          </div>
+        )}
+
+        {!loading && hasSearched && sorted.length === 0 && (results.length === 0 || availability !== 'available') && (
+          <div className="results-empty">
+            <h3>No homes match those filters</h3>
             <p>Try a different state or type, or remove a support need.</p>
             <a href="/find/submit" className="listing-btn listing-btn-primary">Submit a referral — we&rsquo;ll search our network</a>
           </div>
