@@ -115,13 +115,16 @@ export default function FacilitiesPage() {
   const [selected,      setSelected]      = useState<any>(null);
   const [showFac,       setShowFac]       = useState(false);
   const [showVac,       setShowVac]       = useState(false);
+  const [editingId,     setEditingId]     = useState<string | null>(null);
   const [formTab,       setFormTab]       = useState(0);
   const [fac,           setFac]           = useState({ ...BLANK_FAC });
   const [location,      setLocation]      = useState<LocationData>({ ...BLANK_LOC });
   const [vacForm,       setVacForm]       = useState({ ...BLANK_VAC });
   const [imageFiles,    setImageFiles]    = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
   const [saving,        setSaving]        = useState(false);
+  const [deleting,      setDeleting]      = useState(false);
   const [toggling,      setToggling]      = useState<string | null>(null);
   const [err,           setErr]           = useState('');
   const [typeFilter,    setTypeFilter]    = useState<string>('all');
@@ -138,10 +141,55 @@ export default function FacilitiesPage() {
   }, [imageFiles]);
 
   const resetForm = () => {
+    setEditingId(null);
     setFac({ ...BLANK_FAC, features: [''] });
     setLocation({ ...BLANK_LOC });
+    setImageFiles([]); setImagePreviews([]); setExistingImages([]);
+    setErr(''); setFormTab(0);
+  };
+
+  const BEDBATH_RE = /^\s*\d+\s+(bed|bath)rooms?\s*$/i;
+
+  const openEdit = (f: any) => {
+    const feats: string[] = Array.isArray(f.features) ? f.features : [];
+    const bedLine  = feats.find(x => /^\s*\d+\s+bedrooms?\s*$/i.test(x));
+    const bathLine = feats.find(x => /^\s*\d+\s+bathrooms?\s*$/i.test(x));
+    setEditingId(f.id);
+    setFac({
+      name: f.name ?? '', type: f.type ?? 'SIL', capacity: String(f.capacity ?? 1),
+      description: f.description ?? '',
+      bedrooms:  bedLine  ? (bedLine.match(/\d+/)?.[0]  ?? '') : '',
+      bathrooms: bathLine ? (bathLine.match(/\d+/)?.[0] ?? '') : '',
+      sdaCategory: f.sda_design_category ?? '',
+      websiteUrl: f.website_url ?? '',
+      contact: { name: f.contact_name ?? '', email: f.contact_email ?? '', phone: f.contact_phone ?? '' },
+      amenities: Array.isArray(f.amenities) ? f.amenities : [],
+      features: (feats.filter(x => !BEDBATH_RE.test(x)).length ? feats.filter(x => !BEDBATH_RE.test(x)) : ['']),
+      careTypes: Array.isArray(f.care_types) ? f.care_types : [],
+      eligibility: f.eligibility ?? '', tenantProfile: f.tenant_profile ?? '',
+      isPublished: f.is_published !== false,
+    });
+    setLocation({
+      address: f.address ?? '', suburb: f.suburb ?? '', state: f.state ?? '', postcode: f.postcode ?? '',
+      lat: f.latitude != null ? Number(f.latitude) : null,
+      lng: f.longitude != null ? Number(f.longitude) : null,
+    });
+    setExistingImages(f.image_urls?.length ? f.image_urls : (f.image_url ? [f.image_url] : []));
     setImageFiles([]); setImagePreviews([]);
     setErr(''); setFormTab(0);
+    setShowFac(true);
+  };
+
+  const deleteFacility = async (f: any) => {
+    if (!confirm(`Remove ${f.name} from the platform? It will be hidden from the public site and dashboard.`)) return;
+    setDeleting(true); setErr('');
+    try {
+      await api.facilities.delete(f.id);
+      setSelected(null);
+      await mutate(); refreshFacilities();
+    } catch (e: any) {
+      alert(e.message || 'Failed to remove facility');
+    } finally { setDeleting(false); }
   };
 
   const toggleAmenity = (key: string) =>
@@ -168,7 +216,7 @@ export default function FacilitiesPage() {
     }
     setSaving(true); setErr('');
     try {
-      const created = await api.facilities.create({
+      const payload: any = {
         name: fac.name, type: fac.type,
         address: location.address, suburb: location.suburb,
         state: location.state, postcode: location.postcode,
@@ -182,18 +230,37 @@ export default function FacilitiesPage() {
         features: [
           ...(fac.bedrooms ? [`${fac.bedrooms} bedroom${fac.bedrooms === '1' ? '' : 's'}`] : []),
           ...(fac.bathrooms ? [`${fac.bathrooms} bathroom${fac.bathrooms === '1' ? '' : 's'}`] : []),
-          ...fac.features.filter(f => f.trim()),
+          ...fac.features.map(f => f.trim()).filter(Boolean).filter(f => !BEDBATH_RE.test(f)),
         ],
         care_types: fac.careTypes,
         eligibility: fac.eligibility || undefined,
         tenant_profile: fac.tenantProfile || undefined,
         is_published: fac.isPublished,
-      });
-      const facility = created.data;
-      if (imageFiles.length) {
-        const form = new FormData();
-        imageFiles.forEach(f => form.append('images', f));
-        await api.facilities.uploadImages(facility.id, form);
+      };
+
+      if (editingId) {
+        // Upload any new photos (endpoint appends + returns the full array),
+        // then PATCH the final ordered list — which also drops removed ones.
+        let images = [...existingImages];
+        if (imageFiles.length) {
+          const before: string[] = selected?.image_urls ?? [];
+          const form = new FormData();
+          imageFiles.forEach(f => form.append('images', f));
+          const res = await api.facilities.uploadImages(editingId, form);
+          const added = ((res.data?.image_urls ?? []) as string[]).filter(u => !before.includes(u));
+          images = [...images, ...added];
+        }
+        payload.image_urls = images;
+        payload.image_url = images[0] ?? null;
+        const updated = await api.facilities.update(editingId, payload);
+        if (selected?.id === editingId) setSelected(updated.data);
+      } else {
+        const created = await api.facilities.create(payload);
+        if (imageFiles.length) {
+          const form = new FormData();
+          imageFiles.forEach(f => form.append('images', f));
+          await api.facilities.uploadImages(created.data.id, form);
+        }
       }
       await mutate(); refreshFacilities();
       setShowFac(false); resetForm();
@@ -343,11 +410,14 @@ export default function FacilitiesPage() {
       {/* ── Detail side panel ── */}
       {selected && (
         <div className="facility-detail-panel">
-          <div style={{ padding: '14px 16px', borderBottom: '0.5px solid var(--gray-200)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ fontSize: 14, margin: 0 }}>Vacancy management</h2>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <button className="btn btn-primary btn-sm" onClick={() => { setShowVac(true); setErr(''); }}>+ Add bed</button>
+          <div style={{ padding: '14px 16px', borderBottom: '0.5px solid var(--gray-200)', flexShrink: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <h2 style={{ fontSize: 14, margin: 0 }}>Facility</h2>
               <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: 'var(--gray-400)', lineHeight: 1 }}>✕</button>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => openEdit(selected)}>✎ Edit details</button>
+              <button className="btn btn-primary btn-sm" onClick={() => { setShowVac(true); setErr(''); }}>+ Add bed</button>
             </div>
           </div>
           <div className="panel-scroll" style={{ padding: '14px 16px' }}>
@@ -438,6 +508,30 @@ export default function FacilitiesPage() {
                 <div style={{ textAlign: 'center', color: 'var(--gray-300)', fontSize: 12, padding: '16px 0' }}>No beds configured yet</div>
               )}
             </div>
+
+            {/* Photos summary */}
+            <div style={{ marginTop: 18 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>
+                Photos ({(selected.image_urls ?? []).length || (selected.image_url ? 1 : 0)})
+              </div>
+              {((selected.image_urls ?? []).length || selected.image_url) ? (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {(selected.image_urls?.length ? selected.image_urls : [selected.image_url]).slice(0, 6).map((src: string, i: number) => (
+                    <img key={i} src={resolvePublicImage(src)} alt="" style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 6 }} />
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: 'var(--gray-400)' }}>No photos — add them from “Edit details → Photos”.</div>
+              )}
+            </div>
+
+            {/* Danger zone */}
+            <div style={{ marginTop: 22, paddingTop: 14, borderTop: '0.5px solid var(--gray-200)' }}>
+              <button className="btn btn-danger btn-sm" disabled={deleting}
+                onClick={() => deleteFacility(selected)} style={{ width: '100%', justifyContent: 'center' }}>
+                {deleting ? <Spinner size={12} /> : 'Remove this facility'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -446,17 +540,18 @@ export default function FacilitiesPage() {
       <Modal
         open={showFac}
         onClose={() => { setShowFac(false); resetForm(); }}
-        title="Add Facility"
+        title={editingId ? 'Edit Facility' : 'Add Facility'}
         footer={
           <>
             {formTab > 0 && (
               <button className="btn btn-secondary" onClick={() => setFormTab(t => t - 1)}>← Back</button>
             )}
-            {formTab < FORM_TABS.length - 1 ? (
-              <button className="btn btn-primary" onClick={() => setFormTab(t => t + 1)}>Next →</button>
-            ) : (
+            {formTab < FORM_TABS.length - 1 && (
+              <button className="btn btn-secondary" onClick={() => setFormTab(t => t + 1)}>Next →</button>
+            )}
+            {(editingId || formTab === FORM_TABS.length - 1) && (
               <button className="btn btn-primary" onClick={saveFacility} disabled={saving}>
-                {saving ? <><Spinner size={14} /> Saving…</> : 'Add facility'}
+                {saving ? <><Spinner size={14} /> Saving…</> : editingId ? 'Save changes' : 'Add facility'}
               </button>
             )}
           </>
@@ -607,9 +702,18 @@ export default function FacilitiesPage() {
               Facility photos <span style={{ fontWeight: 400, color: 'var(--gray-400)' }}>— add as many as you like</span>
             </label>
             <div className="photo-grid">
+              {existingImages.map((src, i) => (
+                <div key={`ex-${src}`} className="photo-tile">
+                  <img src={resolvePublicImage(src)} alt={`Photo ${i + 1}`} />
+                  {i === 0 && <span className="photo-cover-tag">Cover</span>}
+                  <button type="button" className="photo-remove" title="Remove photo"
+                    onClick={() => setExistingImages(list => list.filter((_, j) => j !== i))}>✕</button>
+                </div>
+              ))}
               {imagePreviews.map((src, i) => (
-                <div key={i} className="photo-tile">
-                  <img src={src} alt={`Photo ${i + 1}`} />
+                <div key={`new-${i}`} className="photo-tile">
+                  <img src={src} alt={`New photo ${i + 1}`} />
+                  {existingImages.length === 0 && i === 0 && <span className="photo-cover-tag">Cover</span>}
                   <button type="button" className="photo-remove" title="Remove photo"
                     onClick={() => removeImage(i)}>✕</button>
                 </div>
@@ -621,11 +725,9 @@ export default function FacilitiesPage() {
                 <span>Add photos</span>
               </label>
             </div>
-            {imagePreviews.length === 0 && (
-              <p style={{ fontSize: 12, color: 'var(--gray-400)', margin: '8px 0 0' }}>
-                The first photo becomes the main image on the public listing.
-              </p>
-            )}
+            <p style={{ fontSize: 12, color: 'var(--gray-400)', margin: '8px 0 0' }}>
+              The first photo is the cover image on the public listing. Removing a photo here takes effect when you save.
+            </p>
           </div>
         )}
       </Modal>
