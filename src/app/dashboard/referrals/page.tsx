@@ -330,6 +330,7 @@ function ReferralsInner() {
       )}
 
       <PlacementModal
+        key={placing?.id ?? 'none'}
         referral={placing}
         onClose={() => setPlacing(null)}
         onPlaced={handlePlaced}
