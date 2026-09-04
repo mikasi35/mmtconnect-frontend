@@ -45,6 +45,7 @@ export function PlacementModal({ referral, onClose, onPlaced }: Props) {
   const [type, setType]           = useState('');
   const [state, setState]         = useState(() => guessState(referral?.location_preference));
   const [care, setCare]           = useState<Record<string, boolean>>(initialCare);
+  const [openBedsOnly, setOpenBedsOnly] = useState(true);
   const [results, setResults]     = useState<any[] | null>(null);
   const [loading, setLoading]     = useState(false);
   const [placingId, setPlacingId] = useState<string | null>(null);
@@ -55,10 +56,15 @@ export function PlacementModal({ referral, onClose, onPlaced }: Props) {
   const runSearch = async () => {
     setLoading(true); setErr(''); setResults(null);
     try {
-      const params: Record<string, string> = { has_availability: 'true', limit: '50' };
+      const params: Record<string, string> = { limit: '50' };
       if (type)  params.type = type;
       if (state) params.state = state;
-      if (careKeys.length) params.care_needs = careKeys.join(',');
+      // Care-need matching is based on each bed's supported care levels, so it
+      // only applies when we're restricting to homes with an open bed.
+      if (openBedsOnly) {
+        params.has_availability = 'true';
+        if (careKeys.length) params.care_needs = careKeys.join(',');
+      }
       const res = await api.facilities.list(params);
       setResults((res as any).data ?? []);
     } catch (e: any) {
@@ -109,7 +115,7 @@ export function PlacementModal({ referral, onClose, onPlaced }: Props) {
         </div>
       </div>
 
-      <div className="form-group" style={{ marginTop: 12, marginBottom: 0 }}>
+      <div className="form-group" style={{ marginTop: 12, marginBottom: 0, opacity: openBedsOnly ? 1 : 0.45, pointerEvents: openBedsOnly ? 'auto' : 'none' }}>
         <label className="form-label">Care needs <span style={{ color: 'var(--gray-400)', fontWeight: 400 }}>(optional)</span></label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {CARE_OPTIONS.map(o => {
@@ -133,6 +139,11 @@ export function PlacementModal({ referral, onClose, onPlaced }: Props) {
         </div>
       </div>
 
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: 13, color: 'var(--gray-700)', cursor: 'pointer' }}>
+        <input type="checkbox" checked={openBedsOnly} onChange={e => setOpenBedsOnly(e.target.checked)} style={{ width: 15, height: 15 }} />
+        Only show homes with an available bed
+      </label>
+
       <button
         className="btn btn-primary"
         onClick={runSearch}
@@ -152,11 +163,13 @@ export function PlacementModal({ referral, onClose, onPlaced }: Props) {
       {results && (
         <div style={{ marginTop: 16 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>
-            {results.length} {results.length === 1 ? 'facility' : 'facilities'} with open beds
+            {results.length} {results.length === 1 ? 'facility' : 'facilities'}{openBedsOnly ? ' with an open bed' : ''}
           </div>
           {results.length === 0 ? (
             <div style={{ fontSize: 13, color: 'var(--gray-500)', padding: '16px 0', textAlign: 'center' }}>
-              No facilities match. Try removing a filter.
+              {openBedsOnly
+                ? 'No homes with an open bed match. Uncheck "Only show homes with an available bed", or add beds on the Facilities page.'
+                : 'No facilities match. Try removing a filter.'}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -171,7 +184,10 @@ export function PlacementModal({ referral, onClose, onPlaced }: Props) {
                       <FacilityTypeBadge type={f.type} />
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>
-                      {[f.suburb, f.state].filter(Boolean).join(', ')} · {availableBeds(f)} bed{availableBeds(f) === 1 ? '' : 's'} available
+                      {[f.suburb, f.state].filter(Boolean).join(', ')}
+                      {availableBeds(f) > 0
+                        ? ` · ${availableBeds(f)} bed${availableBeds(f) === 1 ? '' : 's'} available`
+                        : ' · no open beds listed'}
                     </div>
                   </div>
                   <button
