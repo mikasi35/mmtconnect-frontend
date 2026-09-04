@@ -15,6 +15,34 @@ const CARE_LABELS: Record<string, string> = {
   complex_medical: 'Complex medical support',
   overnight_support: 'Overnight support',
   '24h_support': '24-hour support',
+  domestic_assistance: 'Domestic assistance',
+  community_access: 'Community access',
+  therapy_services: 'Therapy services',
+};
+
+const AMENITY_LABELS: Record<string, string> = {
+  ensuite_bathroom: 'Ensuite bathroom',
+  extra_bathrooms: 'Extra bathrooms',
+  accessible_kitchen: 'Accessible kitchen',
+  large_living_area: 'Large living area',
+  alfresco_outdoor: 'Alfresco / outdoor area',
+  double_garage: 'Double garage',
+  single_garage: 'Single garage',
+  ducted_ac: 'Ducted air conditioning',
+  split_system_ac: 'Split system air conditioning',
+  beautiful_gardens: 'Beautiful gardens',
+  fully_furnished: 'Fully furnished',
+  backup_power: 'Backup power supply',
+  out_of_hours_access: 'Out-of-hours access (OOA)',
+  overnight_support_24_7: '24/7 overnight support',
+  registered_nurse: 'Registered nurse support',
+  clinical_support: 'Clinical support staff',
+  wheelchair_accessible: 'Wheelchair accessible',
+  ceiling_hoist: 'Ceiling hoist',
+  pool: 'Swimming pool',
+  gym: 'Gym / exercise room',
+  sensory_room: 'Sensory room',
+  therapy_room: 'Therapy room',
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -22,6 +50,8 @@ const TYPE_LABELS: Record<string, string> = {
   SDA: 'Specialist Disability Accommodation',
   STA: 'Short-Term Accommodation',
 };
+
+const careLabel = (k: string) => CARE_LABELS[k] ?? k.replace(/_/g, ' ');
 
 interface FacilityDetailsPageProps {
   params: { id: string };
@@ -52,20 +82,20 @@ export async function generateMetadata({ params }: FacilityDetailsPageProps): Pr
   } catch { return {}; }
 }
 
-function aggregateSupportedCare(vacancies: any[]): string[] {
-  const list = vacancies ?? [];
-  // Prefer the care levels of open beds; if the home is full, fall back to what
-  // all its beds support so the listing still shows what it provides.
-  const source = list.some(v => v?.status === 'available')
-    ? list.filter(v => v?.status === 'available')
-    : list;
+/** Every care level this home supports — from its beds and its `care_types`. */
+function allSupportedCare(f: any): string[] {
   const keys = new Set<string>();
-  for (const v of source) {
-    for (const [k, on] of Object.entries(v.care_level_supported ?? {})) {
-      if (on) keys.add(k);
-    }
+  for (const c of Array.isArray(f.care_types) ? f.care_types : []) keys.add(c);
+  for (const v of f.vacancies ?? []) {
+    for (const [k, on] of Object.entries(v.care_level_supported ?? {})) if (on) keys.add(k);
   }
-  return [...keys].map(k => CARE_LABELS[k] ?? k);
+  return [...keys].map(careLabel);
+}
+
+function fmtDate(d?: string) {
+  if (!d) return null;
+  const dt = new Date(d);
+  return Number.isNaN(dt.getTime()) ? null : dt.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 export default async function FacilityDetailsPage({ params }: FacilityDetailsPageProps) {
@@ -82,11 +112,10 @@ export default async function FacilityDetailsPage({ params }: FacilityDetailsPag
 
   const f = (await res.json()).data;
   const images: string[] = f.image_urls?.length ? f.image_urls : f.image_url ? [f.image_url] : [];
-  const supportedCare = aggregateSupportedCare(f.vacancies);
-  const features: string[] = [
-    ...(Array.isArray(f.amenities) ? f.amenities : []),
-    ...(Array.isArray(f.features) ? f.features : []),
-  ].filter(Boolean);
+
+  const amenities: string[] = (Array.isArray(f.amenities) ? f.amenities : []).map((a: string) => AMENITY_LABELS[a] ?? a.replace(/_/g, ' '));
+  const featureBullets: string[] = (Array.isArray(f.features) ? f.features : []).filter(Boolean);
+  const supportedCare = allSupportedCare(f);
 
   const available = Number(f.available_beds) || 0;
   const total = Number(f.total_beds) || 0;
@@ -94,6 +123,15 @@ export default async function FacilityDetailsPage({ params }: FacilityDetailsPag
   const lng = f.longitude != null ? parseFloat(f.longitude) : null;
   const addressLine = [f.address, f.suburb, f.state, f.postcode].filter(Boolean).join(', ');
   const referralHref = `/find/submit?facility=${f.id}&name=${encodeURIComponent(f.name)}`;
+
+  const rank = (v: any) => (v.status === 'available' ? 0 : 1);
+  const beds: any[] = (Array.isArray(f.vacancies) ? f.vacancies : [])
+    .slice()
+    .sort((a: any, b: any) => rank(a) - rank(b)
+      || String(a.label ?? '').localeCompare(String(b.label ?? ''), undefined, { numeric: true }));
+
+  const bedroomFact = featureBullets.find(x => /^\s*\d+\s+bedrooms?\s*$/i.test(x))?.match(/\d+/)?.[0];
+  const bathroomFact = featureBullets.find(x => /^\s*\d+\s+bathrooms?\s*$/i.test(x))?.match(/\d+/)?.[0];
 
   const schema = {
     '@context': 'https://schema.org',
@@ -113,7 +151,7 @@ export default async function FacilityDetailsPage({ params }: FacilityDetailsPag
     email: f.contact_email ?? undefined,
     url: f.website_url ?? `${SITE_URL}/find/facilities/${f.id}`,
     image: images[0] ?? undefined,
-    numberOfRooms: available,
+    numberOfRooms: total || available,
   };
 
   return (
@@ -129,6 +167,9 @@ export default async function FacilityDetailsPage({ params }: FacilityDetailsPag
       <div className="listing-head">
         <div className="listing-badges">
           <span className="listing-badge listing-badge-type">{f.type}</span>
+          {f.sda_design_category && (
+            <span className="listing-badge" style={{ background: '#EEF2FF', color: '#3730A3' }}>{f.sda_design_category}</span>
+          )}
           {available > 0
             ? <span className="listing-badge listing-badge-available">● Available</span>
             : <span className="listing-badge listing-badge-full">Currently full</span>}
@@ -155,7 +196,19 @@ export default async function FacilityDetailsPage({ params }: FacilityDetailsPag
         {total > 0 && (
           <div className="listing-fact">
             <div className="listing-fact-value">{total}</div>
-            <div className="listing-fact-label">Total beds</div>
+            <div className="listing-fact-label">{total === 1 ? 'Bed' : 'Beds'} total</div>
+          </div>
+        )}
+        {bedroomFact && (
+          <div className="listing-fact">
+            <div className="listing-fact-value">{bedroomFact}</div>
+            <div className="listing-fact-label">{bedroomFact === '1' ? 'Bedroom' : 'Bedrooms'}</div>
+          </div>
+        )}
+        {bathroomFact && (
+          <div className="listing-fact">
+            <div className="listing-fact-value">{bathroomFact}</div>
+            <div className="listing-fact-label">{bathroomFact === '1' ? 'Bathroom' : 'Bathrooms'}</div>
           </div>
         )}
         <div className="listing-fact">
@@ -168,33 +221,88 @@ export default async function FacilityDetailsPage({ params }: FacilityDetailsPag
       {f.description && (
         <section className="listing-section">
           <h2 className="listing-section-title">About this home</h2>
-          <p className="listing-prose">{f.description}</p>
-          {f.tenant_profile && <p className="listing-prose" style={{ color: '#6B7280' }}>{f.tenant_profile}</p>}
+          <p className="listing-prose" style={{ whiteSpace: 'pre-line' }}>{f.description}</p>
         </section>
       )}
 
-      {/* ── Support ─────────────────────────────────── */}
-      {supportedCare.length > 0 && (
+      {/* ── Support available ───────────────────────── */}
+      {(supportedCare.length > 0 || f.eligibility) && (
         <section className="listing-section">
           <h2 className="listing-section-title">Support available</h2>
-          <ul className="listing-check-list">
-            {supportedCare.map(item => <li key={item}>{item}</li>)}
-          </ul>
+          {supportedCare.length > 0 && (
+            <ul className="listing-check-list">
+              {supportedCare.map(item => <li key={item}>{item}</li>)}
+            </ul>
+          )}
           {f.eligibility && (
-            <p className="listing-prose" style={{ color: '#6B7280', marginTop: 12 }}>
+            <p className="listing-prose" style={{ color: '#6B7280', marginTop: supportedCare.length ? 12 : 0 }}>
               <strong>Eligibility:</strong> {f.eligibility}
             </p>
           )}
         </section>
       )}
 
-      {/* ── Features ────────────────────────────────── */}
-      {features.length > 0 && (
+      {/* ── Amenities ───────────────────────────────── */}
+      {amenities.length > 0 && (
+        <section className="listing-section">
+          <h2 className="listing-section-title">Amenities</h2>
+          <div className="listing-chips">
+            {amenities.map(x => <span key={x} className="listing-chip" style={{ textTransform: 'capitalize' }}>{x}</span>)}
+          </div>
+        </section>
+      )}
+
+      {/* ── Home features ───────────────────────────── */}
+      {featureBullets.length > 0 && (
         <section className="listing-section">
           <h2 className="listing-section-title">Home features</h2>
-          <div className="listing-chips">
-            {features.map(x => <span key={x} className="listing-chip">{x}</span>)}
+          <ul className="listing-check-list">
+            {featureBullets.map(x => <li key={x}>{x}</li>)}
+          </ul>
+        </section>
+      )}
+
+      {/* ── Rooms & availability ────────────────────── */}
+      {beds.length > 0 && (
+        <section className="listing-section">
+          <h2 className="listing-section-title">Rooms &amp; availability</h2>
+          <div className="listing-rooms">
+            {beds.map((v, i) => {
+              const isAvail = v.status === 'available';
+              const careKeys = Object.entries(v.care_level_supported ?? {}).filter(([, on]) => on).map(([k]) => careLabel(k));
+              const from = isAvail ? fmtDate(v.start_date) : null;
+              return (
+                <div key={v.id ?? i} className="listing-room">
+                  <div className="listing-room-head">
+                    <span className="listing-room-name">{v.label || `Bedroom ${i + 1}`}</span>
+                    <span className={`listing-room-status ${isAvail ? 'is-available' : 'is-full'}`}>
+                      {isAvail ? 'Available' : 'Occupied'}
+                    </span>
+                  </div>
+                  {from && <div className="listing-room-meta">Available from {from}</div>}
+                  {careKeys.length > 0 && (
+                    <div className="listing-chips" style={{ marginTop: 8 }}>
+                      {careKeys.map(k => <span key={k} className="listing-chip">{k}</span>)}
+                    </div>
+                  )}
+                  {v.notes && !/^currently tenanted$/i.test(String(v.notes).trim()) && (
+                    <div className="listing-room-meta" style={{ marginTop: 6 }}>{v.notes}</div>
+                  )}
+                </div>
+              );
+            })}
           </div>
+        </section>
+      )}
+
+      {/* ── Who lives here ──────────────────────────── */}
+      {f.tenant_profile && (
+        <section className="listing-section">
+          <h2 className="listing-section-title">Who lives here</h2>
+          <p className="listing-prose" style={{ whiteSpace: 'pre-line' }}>{f.tenant_profile}</p>
+          <p className="listing-prose" style={{ color: '#6B7280', fontSize: 13, marginTop: 8 }}>
+            A coordinator will talk through whether the household is a good match before any placement.
+          </p>
         </section>
       )}
 
@@ -216,6 +324,7 @@ export default async function FacilityDetailsPage({ params }: FacilityDetailsPag
         </p>
         <div className="listing-help-actions">
           {f.contact_phone && <a href={`tel:${String(f.contact_phone).replace(/\s+/g, '')}`} className="listing-btn listing-btn-outline">Call {f.contact_phone}</a>}
+          {f.website_url && <a href={f.website_url} target="_blank" rel="noopener noreferrer" className="listing-btn listing-btn-outline">Visit website</a>}
           <a href="/find/submit" className="listing-btn listing-btn-outline">Contact MMT Care</a>
         </div>
       </section>
