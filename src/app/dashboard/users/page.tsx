@@ -23,12 +23,30 @@ export default function UsersPage() {
   const [showForm, setShowForm] = useState(false);
   const [form,     setForm]     = useState({ ...BLANK });
   const [saving,   setSaving]   = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [rowBusy,  setRowBusy]  = useState<string | null>(null);
   const [err,      setErr]      = useState('');
   const [success, setSuccess]   = useState('');
   const [sendInvite, setSendInvite] = useState(false);
 
   const rows: any[] = Array.isArray(users) ? users : [];
+
+  const patchUser = async (id: string, body: Record<string, any>, msg: string) => {
+    setRowBusy(id); setErr('');
+    try {
+      await api.users.update(id, body);
+      setSuccess(msg);
+      await mutate();
+    } catch (e: any) {
+      alert(e.message || 'Update failed');
+    } finally {
+      setRowBusy(null);
+    }
+  };
+
+  const toggleActive = (u: any) => {
+    if (u.is_active && !confirm(`Deactivate ${u.name}? They will lose access until reactivated.`)) return;
+    patchUser(u.id, { is_active: !u.is_active }, `${u.name} ${u.is_active ? 'deactivated' : 'activated'}.`);
+  };
 
   const save = async () => {
     if (!form.name || !form.email || (!form.password && !sendInvite)) {
@@ -45,21 +63,6 @@ export default function UsersPage() {
       setSuccess(sendInvite ? 'User created and invitation email sent.' : 'User created successfully.');
     } catch (e: any) { setErr(e.message || 'Failed'); }
     finally { setSaving(false); }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
-    setDeletingId(id);
-    setErr('');
-    try {
-      await api.users.delete(id);
-      setSuccess('User deleted successfully.');
-      await mutate();
-    } catch (e: any) {
-      alert(e.message || 'Failed to delete user');
-    } finally {
-      setDeletingId(null);
-    }
   };
 
   return (
@@ -100,9 +103,19 @@ export default function UsersPage() {
                         </td>
                         <td style={{ color:'var(--gray-500)' }}>{u.email}</td>
                         <td>
-                          <span className="badge" style={{ background:rc.bg, color:rc.text, textTransform:'capitalize' }}>
-                            {u.role.replace('_',' ')}
-                          </span>
+                          <select
+                            value={u.role === 'admin' ? 'admin' : 'coordinator'}
+                            disabled={rowBusy === u.id}
+                            onChange={e => {
+                              const role = e.target.value;
+                              if (role !== u.role) patchUser(u.id, { role }, `${u.name} is now ${role}.`);
+                            }}
+                            className="form-select"
+                            style={{ padding:'3px 6px', fontSize:11, height:'auto', width:'auto', background:rc.bg, color:rc.text, fontWeight:600 }}
+                          >
+                            <option value="coordinator">Coordinator</option>
+                            <option value="admin">Admin</option>
+                          </select>
                         </td>
                         <td style={{ color:'var(--gray-500)' }}>{u.organisation ?? '—'}</td>
                         <td style={{ color:'var(--gray-400)' }}>{u.last_login_at ? fmtDate(u.last_login_at) : 'Never'}</td>
@@ -113,9 +126,12 @@ export default function UsersPage() {
                         </td>
                         <td style={{ color:'var(--gray-400)' }}>{fmtDate(u.created_at)}</td>
                         <td>
-                          <button onClick={() => handleDelete(u.id)} disabled={deletingId === u.id}
-                            className="btn btn-danger btn-sm" style={{ padding: '3px 8px', fontSize: '11px' }}>
-                            {deletingId === u.id ? 'Deleting…' : 'Delete'}
+                          <button
+                            onClick={() => toggleActive(u)}
+                            disabled={rowBusy === u.id}
+                            className={`btn btn-sm ${u.is_active ? 'btn-danger' : 'btn-primary'}`}
+                            style={{ padding: '3px 8px', fontSize: '11px' }}>
+                            {rowBusy === u.id ? '…' : u.is_active ? 'Deactivate' : 'Activate'}
                           </button>
                         </td>
                       </tr>
@@ -152,9 +168,26 @@ export default function UsersPage() {
                       <span style={{ color: 'var(--gray-400)' }}>Joined</span>
                       <span>{fmtDate(u.created_at)}</span>
                     </div>
-                    <button onClick={() => handleDelete(u.id)} disabled={deletingId === u.id}
-                      className="btn btn-danger btn-sm" style={{ width: '100%', justifyContent: 'center' }}>
-                      {deletingId === u.id ? 'Deactivating…' : 'Deactivate user'}
+                    <label style={{ display: 'block', fontSize: 12, color: 'var(--gray-400)', marginBottom: 4 }}>Role</label>
+                    <select
+                      value={u.role === 'admin' ? 'admin' : 'coordinator'}
+                      disabled={rowBusy === u.id}
+                      onChange={e => {
+                        const role = e.target.value;
+                        if (role !== u.role) patchUser(u.id, { role }, `${u.name} is now ${role}.`);
+                      }}
+                      className="form-select"
+                      style={{ width: '100%', marginBottom: 10 }}
+                    >
+                      <option value="coordinator">Coordinator</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <button
+                      onClick={() => toggleActive(u)}
+                      disabled={rowBusy === u.id}
+                      className={`btn btn-sm ${u.is_active ? 'btn-danger' : 'btn-primary'}`}
+                      style={{ width: '100%', justifyContent: 'center' }}>
+                      {rowBusy === u.id ? '…' : u.is_active ? 'Deactivate user' : 'Activate user'}
                     </button>
                   </div>
                 );
