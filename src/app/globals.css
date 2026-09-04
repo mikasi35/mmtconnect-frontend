@@ -1245,6 +1245,17 @@ h1,h2,h3,h4,h5,h6 {
   display: flex;
   flex-direction: column;
 }
+
+/* Detail-panel body scrolls within the panel so the action buttons at the
+   bottom are always reachable (desktop + mobile). */
+.panel-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 .referrals-cards { display: none; }   /* shown only on mobile */
 .referrals-table-wrap { display: block; }
 
@@ -1321,19 +1332,13 @@ h1,h2,h3,h4,h5,h6 {
   }
   .modal-header { border-radius: 20px 20px 0 0; }
 
-  /* Detail panels — bounded flex column so the inner area scrolls, not the page */
+  /* Detail panels — bounded flex column so the inner area scrolls, not the page.
+     .panel-scroll itself is styled in the base rules. */
   .facility-detail-panel,
   .referral-detail-panel {
     display: flex;
     flex-direction: column;
     max-height: 82dvh;
-  }
-  .panel-scroll {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
   }
 
   /* Touch-friendly min heights */

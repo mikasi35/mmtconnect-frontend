@@ -265,34 +265,33 @@ function ReferralsInner() {
                 <div style={{ fontSize: 13, color: 'var(--gray-700)', lineHeight: 1.5 }}>{selected.notes}</div>
               </div>
             )}
-
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingTop: 4 }}>
-              {selected.status === 'new' && (
-                <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', minHeight: 44 }} disabled={updating === selected.id}
-                  onClick={() => updateStatus(selected.id, 'reviewing')}>
-                  {updating === selected.id ? <Spinner size={14} /> : 'Start review'}
-                </button>
-              )}
-              {selected.status === 'reviewing' && (
-                <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', fontSize: 13, minHeight: 44 }} disabled={updating === selected.id}
-                  onClick={() => updateStatus(selected.id, 'matched')}>
-                  {updating === selected.id ? <Spinner size={14} /> : 'Mark matched'}
-                </button>
-              )}
-              {selected.status === 'matched' && (
-                <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', minHeight: 44 }} disabled={updating === selected.id}
-                  onClick={() => updateStatus(selected.id, 'placed')}>
-                  {updating === selected.id ? <Spinner size={14} /> : 'Confirm placement'}
-                </button>
-              )}
-              {!['placed', 'rejected'].includes(selected.status) && (
-                <button className="btn btn-danger" style={{ flex: 1, justifyContent: 'center', fontSize: 13, minHeight: 44 }} disabled={updating === selected.id}
-                  onClick={() => updateStatus(selected.id, 'rejected')}>
-                  Close referral
-                </button>
-              )}
-            </div>
           </div>
+
+          {/* Action footer — pinned so the buttons are always reachable */}
+          {(() => {
+            const next =
+              selected.status === 'new'       ? { to: 'reviewing', label: 'Start review' } :
+              selected.status === 'reviewing' ? { to: 'matched',   label: 'Mark matched' } :
+              selected.status === 'matched'   ? { to: 'placed',     label: 'Confirm placement' } : null;
+            const canClose = !['placed', 'rejected'].includes(selected.status);
+            if (!next && !canClose) return null;
+            return (
+              <div style={{ flexShrink: 0, borderTop: '0.5px solid var(--gray-200)', background: '#fff', padding: '12px 18px', display: 'flex', gap: 8 }}>
+                {next && (
+                  <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', minHeight: 44 }} disabled={updating === selected.id}
+                    onClick={() => updateStatus(selected.id, next.to)}>
+                    {updating === selected.id ? <Spinner size={14} /> : next.label}
+                  </button>
+                )}
+                {canClose && (
+                  <button className="btn btn-danger" style={{ flex: next ? '0 0 auto' : 1, justifyContent: 'center', fontSize: 13, minHeight: 44 }} disabled={updating === selected.id}
+                    onClick={() => updateStatus(selected.id, 'rejected')}>
+                    Close
+                  </button>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 
