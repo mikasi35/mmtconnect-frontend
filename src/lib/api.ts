@@ -183,6 +183,10 @@ export const api = {
       const q = params ? '?' + new URLSearchParams(params).toString() : '';
       return get<any>(`/public/vacancies${q}`);
     },
+    subscribeBolo:   (body: { email: string; facility_types?: string[]; states?: string[] }) =>
+      post<any>('/public/bolo-subscriptions', body),
+    confirmBolo:     (token: string) => post<any>('/public/bolo-subscriptions/confirm', { token }),
+    unsubscribeBolo: (token: string) => get<any>(`/public/bolo-subscriptions/unsubscribe/${encodeURIComponent(token)}`),
   },
 
   errorLogs: {

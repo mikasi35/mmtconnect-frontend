@@ -103,6 +103,7 @@ export function PlacementModal({ referral, onClose, onPlaced }: Props) {
             <option value="">Any type</option>
             <option value="SIL">SIL — Supported Independent Living</option>
             <option value="SDA">SDA — Specialist Disability Accommodation</option>
+            <option value="MTA">MTA — Medium Term Accommodation</option>
             <option value="STA">STA — Short-term / respite</option>
           </select>
         </div>

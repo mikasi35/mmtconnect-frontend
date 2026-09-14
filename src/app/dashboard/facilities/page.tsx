@@ -311,7 +311,7 @@ export default function FacilitiesPage() {
 
         {/* Type filter chips */}
         <div style={{ background: '#fff', borderBottom: '0.5px solid var(--gray-200)', padding: '10px 16px', display: 'flex', gap: 8, overflowX: 'auto' }}>
-          {['all', 'SIL', 'SDA', 'STA'].map(t => (
+          {['all', 'SIL', 'SDA', 'MTA', 'STA'].map(t => (
             <button key={t} onClick={() => setTypeFilter(t)} style={{
               padding: '6px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600,
               cursor: 'pointer', border: 'none', whiteSpace: 'nowrap', flexShrink: 0,
@@ -572,7 +572,7 @@ export default function FacilitiesPage() {
               <div className="form-group">
                 <label className="form-label">Type *</label>
                 <select className="form-select" value={fac.type} onChange={e => setFac(f => ({ ...f, type: e.target.value }))}>
-                  {['SIL', 'SDA', 'STA'].map(t => <option key={t}>{t}</option>)}
+                  {['SIL', 'SDA', 'MTA', 'STA'].map(t => <option key={t}>{t}</option>)}
                 </select>
               </div>
               <div className="form-group">

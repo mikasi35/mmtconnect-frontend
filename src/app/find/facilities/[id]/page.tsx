@@ -48,6 +48,7 @@ const AMENITY_LABELS: Record<string, string> = {
 const TYPE_LABELS: Record<string, string> = {
   SIL: 'Supported Independent Living',
   SDA: 'Specialist Disability Accommodation',
+  MTA: 'Medium Term Accommodation',
   STA: 'Short-Term Accommodation',
 };
 

@@ -85,7 +85,7 @@ export function CareNeedIcon({ name, size = 24, color = '#1A56CC' }: { name: str
 }
 
 export function AccommodationTypeIcon({ type, size = 36 }: { type: string; size?: number }) {
-  const color = type === 'SDA' ? '#166534' : type === 'STA' ? '#C2410C' : '#1A56CC';
+  const color = type === 'SDA' ? '#166534' : type === 'MTA' ? '#5B21B6' : type === 'STA' ? '#C2410C' : '#1A56CC';
   const commonProps = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', xmlns: 'http://www.w3.org/2000/svg' };
 
   switch (type) {
@@ -95,6 +95,14 @@ export function AccommodationTypeIcon({ type, size = 36 }: { type: string; size?
           <path d="M4 13.5 12 4l8 9.5" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M4 13.5v6.5h16v-6.5" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M9 12h6" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+    case 'MTA':
+      return (
+        <svg {...commonProps} aria-hidden="true">
+          <path d="M4 12.5 12 5l8 7.5" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M5 12.5v7.5h14v-7.5" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M12 14v6M9 17h6" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       );
     case 'STA':

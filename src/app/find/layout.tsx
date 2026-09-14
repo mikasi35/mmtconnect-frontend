@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
+import { PublicNav } from '@/components/PublicNav';
 
 const LOGO     = '/logo.png';
 const SITE_URL = 'https://app.mmtcare.com.au';
@@ -68,23 +69,7 @@ export default function FindLayout({ children }: { children: React.ReactNode }) 
         dangerouslySetInnerHTML={{ __html: JSON.stringify([orgSchema, webAppSchema]) }}
       />
 
-      <nav className="public-nav">
-        <a href="/find" className="public-nav-logo">
-          <img
-            src={LOGO}
-            alt=""
-            style={{ height: '34px', width: '34px', display: 'block', borderRadius: 8 }}
-            width={34} height={34}
-          />
-          <span className="public-nav-wordmark">MMT Care Connect</span>
-        </a>
-        <div className="public-nav-pill">
-          <a href="/find/search" className="nav-link">Search</a>
-          <a href="/find/submit" className="nav-link">Submit Referral</a>
-          <a href="/find/track"  className="nav-link">Track My Referral</a>
-        </div>
-        <a href="/login" className="nav-button">Coordinator login &rarr;</a>
-      </nav>
+      <PublicNav />
 
       <main>{children}</main>
 

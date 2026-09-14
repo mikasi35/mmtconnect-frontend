@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { AccommodationTypeIcon, CareNeedIcon } from '@/components/ui';
 import { SearchFilters, CARE_OPTIONS } from '@/components/SearchFilters';
+import { BoloSubscribeForm } from '@/components/BoloSubscribeForm';
 
 const FACILITY_TYPES = [
   {
@@ -16,6 +17,12 @@ const FACILITY_TYPES = [
     name: 'Specialist Disability Accommodation',
     desc: 'Purpose-built housing designed for people with extreme functional impairment or very high support needs.',
     color: '#F0FDF4', border: '#16A34A', text: '#166534',
+  },
+  {
+    type: 'MTA',
+    name: 'Medium Term Accommodation',
+    desc: 'Interim accommodation for NDIS participants awaiting a longer-term home, typically for up to 90 days.',
+    color: '#F5F3FF', border: '#7C3AED', text: '#5B21B6',
   },
   {
     type: 'STA',
@@ -186,6 +193,13 @@ export default function FindHomePage() {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* BOLO alert subscription */}
+      <div className="section-block section-blue">
+        <div className="section-inner-wide">
+          <BoloSubscribeForm />
         </div>
       </div>
 
