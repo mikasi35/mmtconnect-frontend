@@ -317,19 +317,6 @@ export default async function FacilityDetailsPage({ params }: FacilityDetailsPag
         {addressLine && <p className="listing-prose" style={{ color: '#6B7280', marginTop: 12, fontSize: 14 }}>{addressLine}</p>}
       </section>
 
-      {/* ── Need help ───────────────────────────────── */}
-      <section className="listing-section">
-        <h2 className="listing-section-title">Need help?</h2>
-        <p className="listing-prose">
-          Our team can help you understand whether this home may be suitable and walk you through the next steps.
-        </p>
-        <div className="listing-help-actions">
-          {f.contact_phone && <a href={`tel:${String(f.contact_phone).replace(/\s+/g, '')}`} className="listing-btn listing-btn-outline">Call {f.contact_phone}</a>}
-          {f.website_url && <a href={f.website_url} target="_blank" rel="noopener noreferrer" className="listing-btn listing-btn-outline">Visit website</a>}
-          <a href="/find/submit" className="listing-btn listing-btn-outline">Contact MMT Care</a>
-        </div>
-      </section>
-
       {/* ── Referral CTA ────────────────────────────── */}
       <div className="listing-cta">
         <div className="listing-cta-title">Interested in this home?</div>

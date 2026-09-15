@@ -1,6 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { AccommodationTypeIcon, CareNeedIcon } from '@/components/ui';
 import { SearchFilters, CARE_OPTIONS } from '@/components/SearchFilters';
 import { BoloSubscribeForm } from '@/components/BoloSubscribeForm';
@@ -37,6 +37,13 @@ export default function FindHomePage() {
   const [type, setType] = useState('');
   const [state, setState] = useState('');
   const [careNeeds, setCareNeeds] = useState<Record<string, boolean>>({});
+  const typeCarouselRef = useRef<HTMLDivElement>(null);
+
+  const scrollTypeCarousel = (dir: 1 | -1) => {
+    const el = typeCarouselRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: 'smooth' });
+  };
 
   const handleSearch = () => {
     const params = new URLSearchParams();
@@ -138,25 +145,47 @@ export default function FindHomePage() {
           <p style={{ textAlign: 'center', color: '#6B7280', fontSize: 15, margin: '0 0 40px' }}>
             Not sure what type your loved one needs? We can help you work it out.
           </p>
-          <div className="facility-type-grid">
-            {FACILITY_TYPES.map(ft => (
-              <div key={ft.type} style={{
-                background: ft.color, borderRadius: 14,
-                border: `1.5px solid ${ft.border}22`, padding: '24px',
-                cursor: 'pointer',
-              }} onClick={() => router.push(`/find/search?type=${ft.type}`)}>
-                <div style={{ fontSize: 36, marginBottom: 12 }}><AccommodationTypeIcon type={ft.type} size={36} /></div>
-                <div style={{
-                  display: 'inline-block', background: '#fff',
-                  borderRadius: 5, padding: '2px 8px', fontSize: 11,
-                  fontWeight: 700, color: ft.text, marginBottom: 10,
-                  border: `1px solid ${ft.border}44`,
-                }}>{ft.type}</div>
-                <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 8px', color: '#111827' }}>{ft.name}</h3>
-                <p style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.6, margin: '0 0 16px' }}>{ft.desc}</p>
-                <span style={{ fontSize: 13, fontWeight: 600, color: ft.text }}>Search {ft.type} vacancies →</span>
-              </div>
-            ))}
+          <div className="facility-type-carousel-wrap">
+            <div className="facility-type-grid" ref={typeCarouselRef}>
+              {FACILITY_TYPES.map(ft => (
+                <div key={ft.type} style={{
+                  background: ft.color, borderRadius: 14,
+                  border: `1.5px solid ${ft.border}22`, padding: '24px',
+                  cursor: 'pointer',
+                }} onClick={() => router.push(`/find/search?type=${ft.type}`)}>
+                  <div style={{ fontSize: 36, marginBottom: 12 }}><AccommodationTypeIcon type={ft.type} size={36} /></div>
+                  <div style={{
+                    display: 'inline-block', background: '#fff',
+                    borderRadius: 5, padding: '2px 8px', fontSize: 11,
+                    fontWeight: 700, color: ft.text, marginBottom: 10,
+                    border: `1px solid ${ft.border}44`,
+                  }}>{ft.type}</div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 8px', color: '#111827' }}>{ft.name}</h3>
+                  <p style={{ fontSize: 13, color: '#4B5563', lineHeight: 1.6, margin: '0 0 16px' }}>{ft.desc}</p>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: ft.text }}>Search {ft.type} vacancies →</span>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="carousel-nav carousel-nav-prev"
+              onClick={() => scrollTypeCarousel(-1)}
+              aria-label="Scroll left"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M15 5 8 12l7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="carousel-nav carousel-nav-next"
+              onClick={() => scrollTypeCarousel(1)}
+              aria-label="Scroll right"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="m9 5 7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
